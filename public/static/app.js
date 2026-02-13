@@ -1,19 +1,19 @@
 /**
- * Googleレビュー無料作成ツール — Frontend JavaScript
+ * RevuQ — Frontend JavaScript
  * Handles: Step navigation, template selection, live preview, form validation,
- *          image upload, login flow, URL copy, PDF download simulation
+ *          image upload, login flow, URL copy, PDF download simulation,
+ *          admin dashboard tabs & toggles
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Detect current page
   const path = window.location.pathname
 
   if (path === '/' || path === '') initHomePage()
   if (path === '/done') initDonePage()
   if (path === '/login') initLoginPage()
   if (path === '/dashboard') initDashboardPage()
+  if (path === '/admin') initAdminPage()
 
-  // Update nav based on "login" state
   updateNav()
 })
 
@@ -36,7 +36,7 @@ function updateNav() {
 }
 
 /* =============================================
-   HOME PAGE — Creation Flow
+   HOME PAGE — LP + Creation Flow
 ============================================= */
 function initHomePage() {
   const step1 = document.getElementById('step-1')
@@ -59,7 +59,6 @@ function initHomePage() {
   // --- Step Navigation ---
   if (btnToStep2) {
     btnToStep2.addEventListener('click', () => {
-      // Validate URL
       const url = googleUrlInput.value.trim()
       if (!url) {
         shakeElement(googleUrlInput)
@@ -72,12 +71,16 @@ function initHomePage() {
         return
       }
 
-      // Transition to step 2
       step1.classList.add('hidden')
       step2.classList.remove('hidden')
       updateStepIndicator(2)
       updatePreview()
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+
+      // Scroll to the create section top
+      const createSection = document.getElementById('create')
+      if (createSection) {
+        createSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
     })
   }
 
@@ -86,7 +89,10 @@ function initHomePage() {
       step2.classList.add('hidden')
       step1.classList.remove('hidden')
       updateStepIndicator(1)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      const createSection = document.getElementById('create')
+      if (createSection) {
+        createSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
     })
   }
 
@@ -94,7 +100,6 @@ function initHomePage() {
   const templateCards = document.querySelectorAll('.template-card')
   templateCards.forEach((card) => {
     card.addEventListener('click', () => {
-      // Remove all selections
       templateCards.forEach((c) => {
         c.classList.remove('border-brand-500', 'ring-2', 'ring-brand-200', 'shadow-md')
         c.classList.add('border-gray-200')
@@ -102,11 +107,9 @@ function initHomePage() {
         if (check) check.remove()
       })
 
-      // Set selection
       card.classList.remove('border-gray-200')
       card.classList.add('border-brand-500', 'ring-2', 'ring-brand-200', 'shadow-md')
 
-      // Add check mark
       const checkDiv = document.createElement('div')
       checkDiv.className = 'absolute -top-1.5 -right-1.5 w-5 h-5 bg-brand-500 rounded-full flex items-center justify-center template-check'
       checkDiv.innerHTML = '<i class="fas fa-check text-white text-[10px]"></i>'
@@ -183,7 +186,6 @@ function initHomePage() {
     const previewAccentBar = document.getElementById('preview-accent-bar')
     const previewWrapper = document.getElementById('preview-template-wrapper')
 
-    // Store name
     if (storeName) {
       previewStoreNameSection.classList.remove('hidden')
       previewStoreName.textContent = storeName
@@ -191,7 +193,6 @@ function initHomePage() {
       previewStoreNameSection.classList.add('hidden')
     }
 
-    // Image
     if (uploadedImageData) {
       previewImgSection.classList.remove('hidden')
       previewCardImage.src = uploadedImageData
@@ -199,7 +200,6 @@ function initHomePage() {
       previewImgSection.classList.add('hidden')
     }
 
-    // Template styling
     const templateStyles = [
       { bg: 'from-gray-100 to-gray-200', bar: '#374151' },
       { bg: 'from-green-50 to-emerald-100', bar: '#059669' },
@@ -214,13 +214,10 @@ function initHomePage() {
     ]
 
     const style = templateStyles[selectedTemplate] || templateStyles[0]
-
-    // Update wrapper background
     previewWrapper.className = `rounded-xl border border-gray-200 overflow-hidden bg-gradient-to-br ${style.bg}`
     previewAccentBar.style.backgroundColor = style.bar
   }
 
-  // Live updates when typing store name
   if (storeNameInput) {
     storeNameInput.addEventListener('input', updatePreview)
   }
@@ -243,7 +240,6 @@ function initHomePage() {
       }
     })
 
-    // Lines
     const line1 = document.getElementById('step-line-1')
     const line2 = document.getElementById('step-line-2')
     if (line1) line1.className = step >= 2 ? 'flex-1 h-0.5 bg-brand-600 mx-2 sm:mx-4 transition-colors' : 'flex-1 h-0.5 bg-gray-200 mx-2 sm:mx-4 transition-colors'
@@ -256,8 +252,6 @@ function initHomePage() {
       updateStepIndicator(3)
       const overlay = document.getElementById('generating-overlay')
       overlay.classList.remove('hidden')
-
-      // Simulate generation delay
       setTimeout(() => {
         window.location.href = '/done'
       }, 1800)
@@ -285,11 +279,9 @@ function initDonePage() {
     })
   }
 
-  // Simulate PDF download
   const downloadBtn = document.getElementById('btn-download-pdf')
   if (downloadBtn) {
     downloadBtn.addEventListener('click', () => {
-      // Show brief animation
       downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 準備中…'
       setTimeout(() => {
         downloadBtn.innerHTML = '<i class="fas fa-check"></i> ダウンロード完了（デモ）'
@@ -326,11 +318,8 @@ function initLoginPage() {
         emailInput.focus()
         return
       }
-
-      // Simulate sending code
       btnSendCode.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> 送信中…'
       btnSendCode.disabled = true
-
       setTimeout(() => {
         sentEmailDisplay.textContent = email
         stepEmail.classList.add('hidden')
@@ -358,11 +347,8 @@ function initLoginPage() {
         codeInput.focus()
         return
       }
-
-      // Demo login — accept anything
       btnLogin.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> ログイン中…'
       btnLogin.disabled = true
-
       setTimeout(() => {
         localStorage.setItem('demo_logged_in', 'true')
         window.location.href = '/dashboard'
@@ -372,23 +358,14 @@ function initLoginPage() {
 }
 
 /* =============================================
-   DASHBOARD PAGE
+   DASHBOARD PAGE (User)
 ============================================= */
 function initDashboardPage() {
-  // Check login state
-  const isLoggedIn = localStorage.getItem('demo_logged_in') === 'true'
-  if (!isLoggedIn) {
-    // Allow access for prototype but show hint
-  }
-
-  // Copy URL buttons
   const copyBtns = document.querySelectorAll('.copy-url-btn')
   copyBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
       const url = btn.dataset.url
       copyToClipboard(url)
-
-      // Feedback
       const icon = btn.querySelector('i')
       icon.className = 'fas fa-check text-green-500'
       setTimeout(() => {
@@ -396,6 +373,88 @@ function initDashboardPage() {
       }, 1500)
     })
   })
+}
+
+/* =============================================
+   ADMIN PAGE (Operator)
+============================================= */
+function initAdminPage() {
+  // --- Tab Navigation ---
+  const tabs = document.querySelectorAll('.admin-tab')
+  const tabContents = document.querySelectorAll('.admin-tab-content')
+
+  function switchTab(tabName) {
+    tabs.forEach((t) => {
+      if (t.dataset.tab === tabName) {
+        t.classList.add('border-brand-600', 'text-brand-600')
+        t.classList.remove('border-transparent', 'text-gray-500')
+      } else {
+        t.classList.remove('border-brand-600', 'text-brand-600')
+        t.classList.add('border-transparent', 'text-gray-500')
+      }
+    })
+    tabContents.forEach((tc) => {
+      if (tc.id === `tab-${tabName}`) {
+        tc.classList.remove('hidden')
+      } else {
+        tc.classList.add('hidden')
+      }
+    })
+  }
+
+  tabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      switchTab(tab.dataset.tab)
+    })
+  })
+
+  // --- Tab links (in overview "すべて見る" buttons) ---
+  const tabLinks = document.querySelectorAll('.admin-tab-link')
+  tabLinks.forEach((link) => {
+    link.addEventListener('click', () => {
+      switchTab(link.dataset.target)
+    })
+  })
+
+  // --- Toggle Switches ---
+  const toggles = document.querySelectorAll('.admin-toggle')
+  toggles.forEach((toggle) => {
+    toggle.addEventListener('click', () => {
+      const isActive = toggle.dataset.active === 'true'
+      const knob = toggle.querySelector('span')
+      if (isActive) {
+        toggle.dataset.active = 'false'
+        toggle.classList.remove('bg-brand-600')
+        toggle.classList.add('bg-gray-300')
+        knob.style.left = '2px'
+      } else {
+        toggle.dataset.active = 'true'
+        toggle.classList.remove('bg-gray-300')
+        toggle.classList.add('bg-brand-600')
+        knob.style.left = 'calc(100% - 1.625rem)'
+      }
+    })
+  })
+
+  // --- Save Settings (demo) ---
+  const saveBtn = document.getElementById('btn-save-settings')
+  if (saveBtn) {
+    saveBtn.addEventListener('click', () => {
+      saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i>保存中…'
+      saveBtn.disabled = true
+      setTimeout(() => {
+        saveBtn.innerHTML = '<i class="fas fa-check mr-1.5"></i>保存しました'
+        saveBtn.classList.remove('bg-brand-600', 'hover:bg-brand-700')
+        saveBtn.classList.add('bg-green-500')
+        setTimeout(() => {
+          saveBtn.innerHTML = '<i class="fas fa-save mr-1.5"></i>設定を保存'
+          saveBtn.classList.remove('bg-green-500')
+          saveBtn.classList.add('bg-brand-600', 'hover:bg-brand-700')
+          saveBtn.disabled = false
+        }, 2000)
+      }, 800)
+    })
+  }
 }
 
 /* =============================================
@@ -421,9 +480,7 @@ function shakeElement(el) {
 
 function copyToClipboard(text) {
   if (navigator.clipboard) {
-    navigator.clipboard.writeText(text).catch(() => {
-      fallbackCopy(text)
-    })
+    navigator.clipboard.writeText(text).catch(() => fallbackCopy(text))
   } else {
     fallbackCopy(text)
   }

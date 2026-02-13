@@ -3,7 +3,7 @@ export const DashboardPage = () => {
     {
       id: 1,
       storeName: 'カフェ こもれび',
-      shortUrl: 'https://g-rev.link/abc123',
+      shortUrl: 'revuq.link/abc123',
       clicks: 47,
       template: 'カフェ風',
       createdAt: '2026-02-10',
@@ -11,7 +11,7 @@ export const DashboardPage = () => {
     {
       id: 2,
       storeName: '焼肉 大将',
-      shortUrl: 'https://g-rev.link/def456',
+      shortUrl: 'revuq.link/def456',
       clicks: 123,
       template: 'ポップ',
       createdAt: '2026-02-08',
@@ -19,7 +19,7 @@ export const DashboardPage = () => {
     {
       id: 3,
       storeName: 'Hair Salon BLOOM',
-      shortUrl: 'https://g-rev.link/ghi789',
+      shortUrl: 'revuq.link/ghi789',
       clicks: 31,
       template: 'ミニマル',
       createdAt: '2026-02-05',
@@ -27,7 +27,7 @@ export const DashboardPage = () => {
     {
       id: 4,
       storeName: '整体院 やすらぎ',
-      shortUrl: 'https://g-rev.link/jkl012',
+      shortUrl: 'revuq.link/jkl012',
       clicks: 8,
       template: 'ナチュラル',
       createdAt: '2026-02-01',
@@ -157,7 +157,7 @@ export const DashboardPage = () => {
       {/* Empty state hint */}
       <div class="mt-8 text-center text-sm text-gray-400">
         <i class="fas fa-flask mr-1"></i>
-        プロトタイプ版 — モックデータを表示しています
+        RevuQ プロトタイプ版 — モックデータを表示しています
       </div>
     </div>
   )

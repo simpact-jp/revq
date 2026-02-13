@@ -1,4 +1,4 @@
-/* ===== Googleレビュー無料作成ツール — Custom Styles ===== */
+/* ===== RevuQ — Custom Styles ===== */
 
 /* Smooth transitions */
 * {
@@ -18,7 +18,7 @@
   animation: shake 0.5s ease-in-out;
 }
 
-/* Remove default link underline in nav */
+/* Remove default link underline */
 a {
   text-decoration: none;
 }
@@ -60,20 +60,26 @@ button:active:not(:disabled) {
   background-color: rgba(59, 130, 246, 0.05);
 }
 
+/* Admin toggle switch */
+.admin-toggle {
+  cursor: pointer;
+}
+.admin-toggle span {
+  transition: left 0.2s ease;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
-
 ::-webkit-scrollbar-track {
   background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
   background: #d1d5db;
   border-radius: 3px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
 }
@@ -82,6 +88,16 @@ button:active:not(:disabled) {
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Smooth scroll for anchor links */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Admin table row hover */
+table tbody tr {
+  transition: background-color 0.1s ease;
 }
 
 /* Responsive utilities */
