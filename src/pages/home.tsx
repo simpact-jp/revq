@@ -365,7 +365,7 @@ export const HomePage = () => {
                         <div id="preview-accent-bar" class="h-2 bg-gray-600"></div>
                         <div class="p-5 space-y-4">
                           <div id="preview-img-section" class="hidden flex justify-center">
-                            <img id="preview-card-image" class="max-w-[7rem] max-h-28 rounded-lg object-contain mx-auto" alt="" />
+                            <img id="preview-card-image" class="max-w-[8rem] max-h-36 rounded-lg object-contain mx-auto" alt="" />
                           </div>
                           <div id="preview-store-name-section" class="hidden text-center">
                             <p id="preview-store-name" class="font-bold text-lg text-gray-800"></p>

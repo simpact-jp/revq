@@ -99,6 +99,21 @@ cards.get('/', async (c) => {
 })
 
 /**
+ * GET /api/cards/qr-preview?url=...
+ * Generate QR SVG for any URL (used in preview/done page)
+ * IMPORTANT: This must be before /:id routes to avoid being caught by the wildcard
+ */
+cards.get('/qr-preview', async (c) => {
+  const url = c.req.query('url')
+  if (!url) return c.json({ error: 'URL is required' }, 400)
+
+  const svg = generateQRSvg(url)
+  return new Response(svg, {
+    headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=3600' },
+  })
+})
+
+/**
  * GET /api/cards/:id
  * Get single card detail
  */
@@ -133,24 +148,10 @@ cards.get('/:id/qr', async (c) => {
   if (!card) return c.json({ error: 'カードが見つかりません' }, 404)
 
   const shortUrl = `${new URL(c.req.url).origin}/r/${card.short_code}`
-  const svg = generateQRSvg(shortUrl, 4, 2)
+  const svg = generateQRSvg(shortUrl)
 
   return new Response(svg, {
     headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=86400' },
-  })
-})
-
-/**
- * GET /api/cards/qr-preview?url=...
- * Generate QR SVG for any URL (used in preview/done page)
- */
-cards.get('/qr-preview', async (c) => {
-  const url = c.req.query('url')
-  if (!url) return c.json({ error: 'URL is required' }, 400)
-
-  const svg = generateQRSvg(url, 4, 2)
-  return new Response(svg, {
-    headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=3600' },
   })
 })
 
@@ -173,14 +174,17 @@ cards.get('/:id/pdf', async (c) => {
     imageData: card.image_key as string | null,
   })
 
-  const fileName = card.store_name
+  // Use short_code for filename to avoid non-ASCII header issues
+  const safeFileName = `RevuQ_${card.short_code}.pdf`
+  // For browsers that support RFC 5987, also provide UTF-8 encoded filename
+  const utf8FileName = card.store_name
     ? `RevuQ_${(card.store_name as string).replace(/\s+/g, '_')}.pdf`
-    : `RevuQ_${card.short_code}.pdf`
+    : safeFileName
 
   return new Response(pdfBytes, {
     headers: {
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="${fileName}"`,
+      'Content-Disposition': `attachment; filename="${safeFileName}"; filename*=UTF-8''${encodeURIComponent(utf8FileName)}`,
     },
   })
 })

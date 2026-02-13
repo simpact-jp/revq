@@ -1,6 +1,6 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
 import fontkit from '@pdf-lib/fontkit'
-import { generateQRSvg } from './qr'
+import { generateQRMatrix } from './qr'
 
 // Template color definitions
 const TEMPLATE_COLORS: Record<string, { r: number; g: number; b: number }> = {
@@ -27,8 +27,6 @@ function isWinAnsiSafe(str: string): boolean {
 }
 
 // Google Fonts CDN URL for Noto Sans JP
-const NOTO_SANS_JP_URL = 'https://cdn.jsdelivr.net/gh/notofonts/noto-cjk/Sans/OTF/Japanese/NotoSansCJKjp-Regular.otf'
-// Lighter alternative
 const NOTO_SANS_JP_URL_ALT = 'https://fonts.gstatic.com/s/notosansjp/v53/Kk3Fid6YPZ9YDA1hASNBIebIMNxwb4-DWQ.ttf'
 
 export async function generateCardPDF(opts: {
@@ -59,7 +57,6 @@ export async function generateCardPDF(opts: {
       }
     } catch (e) {
       console.error('Failed to load Japanese font:', e)
-      // jpFont stays as fontBold — will skip Japanese chars in store name
     }
   }
 
@@ -133,40 +130,43 @@ export async function generateCardPDF(opts: {
   })
   currentY -= 20
 
-  // ---- QR Code (drawn using PDF rectangles) ----
-  const qrSvg = generateQRSvg(shortUrl, 1, 0)
-  const qrModuleSize = 3.5
-  const rectMatches = qrSvg.matchAll(/x="(\d+)" y="(\d+)" width="1" height="1"/g)
-  const qrRects: [number, number][] = []
-  let maxCoord = 0
-  for (const m of rectMatches) {
-    const x = parseInt(m[1]), y = parseInt(m[2])
-    qrRects.push([x, y])
-    if (x > maxCoord) maxCoord = x
-    if (y > maxCoord) maxCoord = y
-  }
-  const qrTotalSize = (maxCoord + 1) * qrModuleSize
+  // ---- QR Code (drawn using matrix data directly) ----
+  const { modules, size: moduleCount } = generateQRMatrix(shortUrl)
+  
+  // Calculate QR code dimensions for PDF
+  // Target QR size: ~120pt with quiet zone
+  const qrTargetSize = 120
+  const quietZone = 4 // 4 modules quiet zone per QR spec
+  const totalModules = moduleCount + quietZone * 2
+  const moduleSize = qrTargetSize / totalModules
+  const qrTotalSize = totalModules * moduleSize
+  
   const qrX = (W - qrTotalSize) / 2
   const qrY = currentY - qrTotalSize - 10
 
-  // White background for QR
+  // White background with border for QR
   page.drawRectangle({
-    x: qrX - 8, y: qrY - 8,
-    width: qrTotalSize + 16, height: qrTotalSize + 16,
+    x: qrX - 4, y: qrY - 4,
+    width: qrTotalSize + 8, height: qrTotalSize + 8,
     color: rgb(1, 1, 1),
     borderColor: rgb(0.85, 0.85, 0.85),
     borderWidth: 0.5,
   })
 
-  // Draw QR modules
-  for (const [cx, cy] of qrRects) {
-    page.drawRectangle({
-      x: qrX + cx * qrModuleSize,
-      y: qrY + qrTotalSize - (cy + 1) * qrModuleSize,
-      width: qrModuleSize,
-      height: qrModuleSize,
-      color: rgb(0.1, 0.1, 0.1),
-    })
+  // Draw QR modules from matrix
+  for (let row = 0; row < moduleCount; row++) {
+    for (let col = 0; col < moduleCount; col++) {
+      if (modules[row][col]) {
+        page.drawRectangle({
+          x: qrX + (col + quietZone) * moduleSize,
+          // PDF y-axis is bottom-up, QR matrix is top-down
+          y: qrY + (moduleCount - 1 - row + quietZone) * moduleSize,
+          width: moduleSize,
+          height: moduleSize,
+          color: rgb(0, 0, 0),
+        })
+      }
+    }
   }
 
   // ---- Short URL text ----
@@ -181,7 +181,7 @@ export async function generateCardPDF(opts: {
   })
 
   // ---- Footer branding ----
-  const brandText = 'Powered by RevuQ'
+  const brandText = 'Powered by RevuQ - Google Review Free Creation Tool'
   const brandSize = 7
   const brandWidth = font.widthOfTextAtSize(brandText, brandSize)
   page.drawRectangle({ x: 0, y: 0, width: W, height: 20, color: rgb(0.97, 0.97, 0.97) })
