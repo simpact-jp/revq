@@ -45,6 +45,14 @@ export const LoginPage = () => {
               <span id="sent-email-display">you@example.com</span> にコードを送信しました
             </p>
 
+            {/* Debug code display — remove in production */}
+            <div class="hidden bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <p class="text-xs text-amber-700 font-semibold mb-1">
+                <i class="fas fa-flask mr-1"></i>プロトタイプ — OTPコード:
+              </p>
+              <p id="debug-code-display" class="text-2xl font-mono font-bold text-amber-800 tracking-[0.3em] text-center"></p>
+            </div>
+
             <div>
               <label class="block text-sm font-semibold text-gray-700 mb-1.5" for="login-code">
                 ワンタイムコード
@@ -78,11 +86,11 @@ export const LoginPage = () => {
           </div>
         </div>
 
-        {/* Demo Notice */}
+        {/* Notice */}
         <div class="mt-6 p-3 bg-amber-50 border border-amber-100 rounded-lg text-center">
           <p class="text-xs text-amber-700">
             <i class="fas fa-flask mr-1"></i>
-            プロトタイプではログインはデモです。任意の値で進めます。
+            プロトタイプ版: OTPコードはメール送信されず画面に表示されます
           </p>
         </div>
       </div>
