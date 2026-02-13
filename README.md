@@ -1,75 +1,101 @@
-# RevuQ — Googleレビュー依頼カード無料作成ツール
+# RevuQ — Googleレビュー依頼カードを無料作成
 
-## プロジェクト概要
-- **名称**: RevuQ（レビューキュー）
-- **目的**: Googleレビュー依頼カード（QR＋短縮URL付き）をログイン不要で作成・PDFダウンロードできるWebアプリ
-- **段階**: UIプロトタイプ（フロントエンドのみ、バックエンドAPI未接続）
+## Project Overview
+- **Name**: RevuQ
+- **Goal**: 店舗オーナーがGoogleレビュー依頼カード（QRコード＋短縮URL入りPDF）を無料で作成できるWebサービス
+- **Stack**: Hono + TypeScript + Cloudflare Pages + D1 Database + Tailwind CSS
 
-## 画面一覧（5画面）
+## URLs
+- **Production**: https://revuq.pages.dev
+- **Sandbox**: https://3000-iowltqx8erevr2msaddoh-82b888ba.sandbox.novita.ai
 
-| 画面 | パス | 説明 |
+## Implemented Features
+
+### 画面構成（5画面）
+| Path | 画面 | 機能 |
 |------|------|------|
-| LP＋作成フロー | `/` | ランディングページ兼カード作成（ヒーロー→特徴→ステップ説明→作成フォーム） |
-| 作成完了 | `/done` | PDF生成完了・短縮URL表示・ダウンロード |
-| ログイン | `/login` | メール＋ワンタイムコード（デモ） |
-| マイページ | `/dashboard` | ユーザーの作成済みカード一覧・クリック数・URLコピー |
-| 運営管理 | `/admin` | サービス運営者用ダッシュボード（ユーザー管理・カード管理・設定） |
+| `/` | LP＋作成フロー | ヒーロー、3ステップ説明、テンプレート選択＋リアルタイムプレビュー |
+| `/done` | 完了・ダウンロード | 成功メッセージ、短縮URL（コピー付）、実QRコード、PDFダウンロード |
+| `/login` | ログイン | メール入力→OTPコード認証（プロトタイプはコード画面表示） |
+| `/dashboard` | マイページ | ユーザーのカード一覧、クリック統計、PDF/QR/削除操作 |
+| `/admin` | 運営管理 | KPI、ユーザー管理、カード管理、サービス設定 |
 
-## 実装済み機能
+### バックエンドAPI
+| Method | Path | 機能 |
+|--------|------|------|
+| `POST` | `/api/auth/send-code` | OTPコード発行（D1保存） |
+| `POST` | `/api/auth/verify` | OTP検証→JWT発行→Cookie設定 |
+| `GET` | `/api/auth/me` | JWTからログインユーザー取得 |
+| `POST` | `/api/auth/logout` | Cookie削除 |
+| `POST` | `/api/cards` | カード作成（未ログインOK） |
+| `GET` | `/api/cards` | ユーザーのカード一覧 |
+| `GET` | `/api/cards/:id` | カード詳細 |
+| `GET` | `/api/cards/:id/qr` | QRコードSVG生成 |
+| `GET` | `/api/cards/:id/pdf` | PDFダウンロード（日本語フォント対応） |
+| `DELETE` | `/api/cards/:id` | カード削除 |
+| `GET` | `/r/:code` | 短縮URL→Googleマップ 302リダイレクト＋クリック記録 |
+| `GET` | `/api/admin/stats` | 運営統計 |
+| `GET` | `/api/admin/users` | ユーザー一覧 |
+| `GET` | `/api/admin/cards` | カード一覧 |
+| `PUT` | `/api/admin/cards/:id/status` | カード状態変更 |
+| `DELETE` | `/api/admin/cards/:id` | カード削除（管理者） |
+| `DELETE` | `/api/admin/users/:id` | ユーザー削除 |
+| `GET` | `/api/admin/recent-activity` | 直近アクティビティ |
 
-### LP（`/`）
-- ヒーローセクション（グラデーション背景・カードビジュアル・CTA）
-- 特徴3カラム（QR自動生成・10テンプレ・PDF即印刷）
-- かんたん3ステップの視覚的説明
-- ステップ制作成フロー（情報入力→テンプレート選択→プレビュー→生成）
+### コア機能
+- **QRコード生成**: 純JavaScript実装（依存ライブラリなし）、SVG出力
+- **PDF生成**: pdf-lib + fontkit、日本語フォント対応（Noto Sans JP）、テンプレートカラー反映、画像埋め込み対応
+- **短縮URL**: `/r/{7文字コード}` → Googleマップへ302リダイレクト
+- **クリック計測**: リダイレクト時にUser-Agent/Refererとともに記録
+- **認証**: メールOTP→JWT（HMAC-SHA256）→HttpOnly Cookie
+- **テンプレート**: 10種類（シンプル、ナチュラル、ラグジュアリー、ポップ、カフェ風、和風、クリーン、ミニマル、ビビッド、写真強調）
 
-### 作成フロー
-- 10種類のテンプレート選択UI（シンプル〜写真強調）
-- リアルタイムプレビュー（店名・画像・テンプレート色が即反映）
-- 画像アップロード（ドラッグ＆ドロップ対応、5MB制限、プレビュー表示）
-- フォームバリデーション（シェイクアニメーション）
+## Data Architecture
+- **D1 Database**: `revuq-production` (ID: 761a2348-4d33-4cd7-9341-3cd9bae78785)
+  - `users`: ユーザー (email, name, plan)
+  - `otps`: ワンタイムコード (email, code, expires_at)
+  - `cards`: レビューカード (store_name, google_url, short_code, template, image_key)
+  - `clicks`: クリック記録 (card_id, user_agent, referer)
+- **画像保存**: Base64でD1のimage_keyカラムに保存（R2有効化後に移行推奨）
 
-### 共通インタラクション
-- 短縮URLコピー機能
-- PDF生成シミュレーション（ローディング→完了画面遷移）
-- ログインフロー（メール→コード入力、デモモード）
-- ログイン状態に応じたナビゲーション切替
-- 全画面レスポンシブ対応（PC優先）
+## Development
 
-### 運営管理（`/admin`）
-- 概要タブ：KPI（ユーザー数・カード数・クリック数・稼働カード）＋直近アクティビティ
-- ユーザータブ：テーブル一覧（検索・CSV出力ボタン・詳細/停止操作）
-- カードタブ：テーブル一覧（検索・ステータスフィルタ・一時停止/削除操作）
-- 設定タブ：サービス設定（トグルスイッチ）、無料プラン制限、短縮URLドメイン、デンジャーゾーン
-- ダークヘッダー（Adminバッジ）で公開サイトと視覚的に区別
-
-## 未実装（今後の開発）
-- [ ] 実際のQRコード生成（ライブラリ連携）
-- [ ] PDF実ファイル生成・ダウンロード
-- [ ] バックエンドAPI（カード保存、短縮URL発行）
-- [ ] D1データベース連携（カード・ユーザーデータ永続化）
-- [ ] 認証（メール＋OTP実装）
-- [ ] クリック計測・アナリティクス
-- [ ] 決済機能（無料/有料プラン差別化）
-- [ ] テンプレートのPDFデザイン実装
-- [ ] 運営管理の認証・権限制御
-
-## 技術スタック
-- **フレームワーク**: Hono v4 (Cloudflare Pages)
-- **フロントエンド**: Tailwind CSS (CDN), Font Awesome, Vanilla JS
-- **ビルド**: Vite + @hono/vite-build
-- **デプロイ先**: Cloudflare Pages
-
-## ローカル開発
 ```bash
-npm install
+# Local development
 npm run build
 pm2 start ecosystem.config.cjs
-# → http://localhost:3000
+
+# DB operations
+npx wrangler d1 migrations apply revuq-production --local
+npx wrangler d1 execute revuq-production --local --file=./seed.sql
+
+# Deploy
+npm run build && npx wrangler pages deploy dist --project-name revuq
+npx wrangler d1 migrations apply revuq-production --remote
 ```
 
-## デプロイ
-```bash
-npm run build
-npx wrangler pages deploy dist --project-name revuq
-```
+## 本番運用への残タスク
+
+### 高優先度
+- [ ] メール送信: Resend/SendGrid連携でOTPを実際にメール送信
+- [ ] R2有効化: 画像をR2に移行（現在はBase64でD1保存）
+- [ ] JWT_SECRET: `wrangler secret put JWT_SECRET`で本番用シークレット設定
+- [ ] ADMIN_PASSWORD: `wrangler secret put ADMIN_PASSWORD`で管理者パスワード設定
+- [ ] 管理者認証: ADMIN_EMAILS設定を本番メールアドレスに変更
+
+### 中優先度
+- [ ] カスタムドメイン: revuq.jp / revuq.link 取得＋設定
+- [ ] Tailwind CSS: CDNからPostCSS/CLIに移行
+- [ ] エラーハンドリング: グローバルエラーハンドラ追加
+- [ ] レート制限: OTP送信に制限追加
+
+### 低優先度
+- [ ] 法務ページ: 利用規約、プライバシーポリシー、特定商取引法表記
+- [ ] 有料プラン: Stripe連携、カード枚数制限
+- [ ] アナリティクス: 日別クリック推移グラフ
+- [ ] PWA: オフライン対応
+
+## Deployment
+- **Platform**: Cloudflare Pages + D1
+- **Status**: ✅ Active (Production)
+- **Last Updated**: 2026-02-13
