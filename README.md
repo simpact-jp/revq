@@ -1,21 +1,60 @@
-```txt
+# Googleレビュー無料作成ツール
+
+## プロジェクト概要
+- **名称**: Googleレビュー無料作成ツール
+- **目的**: Googleレビュー依頼カード（QR＋短縮URL付き）をログイン不要で作成・PDFダウンロードできるWebアプリ
+- **段階**: UIプロトタイプ（フロントエンドのみ、バックエンドAPI未接続）
+
+## 画面一覧
+
+| 画面 | パス | 説明 |
+|------|------|------|
+| 作成フロー | `/` | ランディング兼カード作成（ステップ1→2→生成） |
+| 作成完了 | `/done` | PDF生成完了・短縮URL表示・ダウンロード |
+| ログイン | `/login` | メール＋ワンタイムコード（デモ） |
+| 管理画面 | `/dashboard` | 作成済みカード一覧・クリック数・URLコピー |
+
+## 実装済み機能
+- ステップ制作成フロー（情報入力→テンプレート選択→プレビュー→生成）
+- 10種類のテンプレート選択UI（シンプル〜写真強調）
+- リアルタイムプレビュー（店名・画像・テンプレート色が即反映）
+- 画像アップロード（ドラッグ＆ドロップ対応、5MB制限、プレビュー表示）
+- フォームバリデーション（URL必須チェック、シェイクアニメーション）
+- 短縮URLコピー機能
+- PDF生成シミュレーション（ローディング→完了画面遷移）
+- PDFダウンロードシミュレーション
+- ログインフロー（メール→コード入力、デモモード）
+- 管理画面（モックデータ4件、統計サマリー）
+- ログイン状態に応じたナビゲーション切替
+- 全画面レスポンシブ対応（PC優先、モバイル崩れなし）
+- 日本語UI完全対応
+
+## 未実装（今後の開発）
+- [ ] 実際のQRコード生成（ライブラリ連携）
+- [ ] PDF実ファイル生成・ダウンロード
+- [ ] バックエンドAPI（カード保存、短縮URL発行）
+- [ ] D1データベース連携（カード・ユーザーデータ永続化）
+- [ ] 認証（メール＋OTP実装）
+- [ ] クリック計測・アナリティクス
+- [ ] 決済機能（無料/有料プラン差別化）
+- [ ] テンプレートのPDFデザイン実装
+
+## 技術スタック
+- **フレームワーク**: Hono v4 (Cloudflare Pages)
+- **フロントエンド**: Tailwind CSS (CDN), Font Awesome, Vanilla JS
+- **ビルド**: Vite + @hono/vite-build
+- **デプロイ先**: Cloudflare Pages
+
+## ローカル開発
+```bash
 npm install
-npm run dev
+npm run build
+pm2 start ecosystem.config.cjs
+# → http://localhost:3000
 ```
 
-```txt
-npm run deploy
-```
-
-[For generating/synchronizing types based on your Worker configuration run](https://developers.cloudflare.com/workers/wrangler/commands/#types):
-
-```txt
-npm run cf-typegen
-```
-
-Pass the `CloudflareBindings` as generics when instantiation `Hono`:
-
-```ts
-// src/index.ts
-const app = new Hono<{ Bindings: CloudflareBindings }>()
+## デプロイ
+```bash
+npm run build
+npx wrangler pages deploy dist --project-name <project-name>
 ```
