@@ -1,101 +1,105 @@
-# RevuQ — Googleレビュー依頼カードを無料作成
+# RevuQ — Googleレビュー依頼カード作成ツール
 
 ## Project Overview
 - **Name**: RevuQ
-- **Goal**: 店舗オーナーがGoogleレビュー依頼カード（QRコード＋短縮URL入りPDF）を無料で作成できるWebサービス
-- **Stack**: Hono + TypeScript + Cloudflare Pages + D1 Database + Tailwind CSS
+- **Goal**: 店舗オーナーがGoogleレビュー依頼カード（QRコード+短縮URL入りPDF）を無料で簡単に作成できるWebツール
+- **Platform**: Cloudflare Pages + Hono + D1
+- **Status**: Production
 
 ## URLs
 - **Production**: https://revuq.pages.dev
-- **Sandbox**: https://3000-iowltqx8erevr2msaddoh-82b888ba.sandbox.novita.ai
+- **Admin**: https://revuq.pages.dev/admin
+- **GitHub**: deployed via Cloudflare Pages
 
-## Implemented Features
+## Features
 
-### 画面構成（5画面）
-| Path | 画面 | 機能 |
-|------|------|------|
-| `/` | LP＋作成フロー | ヒーロー、3ステップ説明、テンプレート選択＋リアルタイムプレビュー |
-| `/done` | 完了・ダウンロード | 成功メッセージ、短縮URL（コピー付）、実QRコード、PDFダウンロード |
-| `/login` | ログイン | メール入力→OTPコード認証（プロトタイプはコード画面表示） |
-| `/dashboard` | マイページ | ユーザーのカード一覧、クリック統計、PDF/QR/削除操作 |
-| `/admin` | 運営管理 | KPI、ユーザー管理、カード管理、サービス設定 |
+### 完了済み機能
+- **カード作成フロー**: GoogleマップURL入力 → テンプレート選択 → PDF生成・ダウンロード
+- **10種テンプレート**: simple, natural, luxury, pop, cafe, japanese, clean, minimal, vivid, photo
+- **QRコード生成**: uqr ライブラリ（ECC H: 30%冗長）で高い読み取り精度
+- **短縮URLリダイレクト**: `/r/:code` でGoogleマップURLにリダイレクト + クリック計測
+- **OTP認証**: メールアドレスでワンタイムパスワード認証（Resend API対応）
+  - メール送信サービス設定済み → メールでOTP送信
+  - メール未設定（プロトタイプモード） → 画面にコード表示
+  - 再送信機能対応
+- **PDF印刷レイアウト選択**:
+  - A4 1枚拡大（カード1つを大きく印刷）
+  - A4 2分割
+  - A4 4分割
+  - A4 8分割
+- **CTA文字編集**: プレビュー画面でカードに表示するメッセージを自由に変更可能（デフォルト：「Googleレビューにご協力ください」）
+- **マイページ（Dashboard）**: ログインユーザーのカード管理、PDF各レイアウトでダウンロード
+- **運営管理画面（Admin）**:
+  - 概要: KPI（ユーザー数、カード数、クリック数、稼働カード、OTP発行数）
+  - ユーザー一覧: 登録数、カード数、クリック数、プラン、操作
+  - カード一覧: 状態管理（稼働/一時停止）、削除
+  - OTP/メールタブ: メール送信設定状態、OTP統計、最近のOTPアクティビティ
+  - 設定: サービス設定（トグル）、無料プラン制限
 
-### バックエンドAPI
-| Method | Path | 機能 |
-|--------|------|------|
-| `POST` | `/api/auth/send-code` | OTPコード発行（D1保存） |
-| `POST` | `/api/auth/verify` | OTP検証→JWT発行→Cookie設定 |
-| `GET` | `/api/auth/me` | JWTからログインユーザー取得 |
-| `POST` | `/api/auth/logout` | Cookie削除 |
-| `POST` | `/api/cards` | カード作成（未ログインOK） |
-| `GET` | `/api/cards` | ユーザーのカード一覧 |
-| `GET` | `/api/cards/:id` | カード詳細 |
-| `GET` | `/api/cards/:id/qr` | QRコードSVG生成 |
-| `GET` | `/api/cards/:id/pdf` | PDFダウンロード（日本語フォント対応） |
-| `DELETE` | `/api/cards/:id` | カード削除 |
-| `GET` | `/r/:code` | 短縮URL→Googleマップ 302リダイレクト＋クリック記録 |
-| `GET` | `/api/admin/stats` | 運営統計 |
-| `GET` | `/api/admin/users` | ユーザー一覧 |
-| `GET` | `/api/admin/cards` | カード一覧 |
-| `PUT` | `/api/admin/cards/:id/status` | カード状態変更 |
-| `DELETE` | `/api/admin/cards/:id` | カード削除（管理者） |
-| `DELETE` | `/api/admin/users/:id` | ユーザー削除 |
-| `GET` | `/api/admin/recent-activity` | 直近アクティビティ |
+## API Endpoints
 
-### コア機能
-- **QRコード生成**: 純JavaScript実装（依存ライブラリなし）、SVG出力
-- **PDF生成**: pdf-lib + fontkit、日本語フォント対応（Noto Sans JP）、テンプレートカラー反映、画像埋め込み対応
-- **短縮URL**: `/r/{7文字コード}` → Googleマップへ302リダイレクト
-- **クリック計測**: リダイレクト時にUser-Agent/Refererとともに記録
-- **認証**: メールOTP→JWT（HMAC-SHA256）→HttpOnly Cookie
-- **テンプレート**: 10種類（シンプル、ナチュラル、ラグジュアリー、ポップ、カフェ風、和風、クリーン、ミニマル、ビビッド、写真強調）
+### 認証 (`/api/auth`)
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/auth/send-code` | OTPコード送信（email） |
+| POST | `/api/auth/verify` | OTP検証・JWT発行（email, code） |
+| GET | `/api/auth/me` | 現在のユーザー取得 |
+| POST | `/api/auth/logout` | ログアウト |
+
+### カード (`/api/cards`)
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/cards` | カード作成（google_url, store_name?, template?, image_data?, cta_text?） |
+| GET | `/api/cards` | ユーザーのカード一覧 |
+| GET | `/api/cards/qr-preview?url=` | URLのQR SVGプレビュー |
+| GET | `/api/cards/:id` | カード詳細 |
+| PUT | `/api/cards/:id` | カード更新（store_name, cta_text, template） |
+| GET | `/api/cards/:id/qr` | QRコードSVG |
+| GET | `/api/cards/:id/pdf?layout=&copies=` | PDF生成（layout: card/a4-single/a4-multi, copies: 1-8） |
+| DELETE | `/api/cards/:id` | カード削除 |
+
+### 管理 (`/api/admin`)
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/admin/stats` | サービス統計（ユーザー数、カード数、クリック数、OTP数、メール設定状態） |
+| GET | `/api/admin/users` | ユーザー一覧 |
+| GET | `/api/admin/cards` | カード一覧 |
+| GET | `/api/admin/recent-activity` | 最近のアクティビティ（ユーザー、カード、OTP） |
+| PUT | `/api/admin/cards/:id/status` | カード状態変更 |
+| PUT | `/api/admin/cards/:id` | カード編集 |
+| DELETE | `/api/admin/cards/:id` | カード削除 |
+| DELETE | `/api/admin/users/:id` | ユーザー削除 |
+
+### 短縮URL
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/r/:code` | Googleマップにリダイレクト + クリック計測 |
 
 ## Data Architecture
-- **D1 Database**: `revuq-production` (ID: 761a2348-4d33-4cd7-9341-3cd9bae78785)
-  - `users`: ユーザー (email, name, plan)
-  - `otps`: ワンタイムコード (email, code, expires_at)
-  - `cards`: レビューカード (store_name, google_url, short_code, template, image_key)
-  - `clicks`: クリック記録 (card_id, user_agent, referer)
-- **画像保存**: Base64でD1のimage_keyカラムに保存（R2有効化後に移行推奨）
+- **D1 Database**: `revuq-production`
+  - `users` - ユーザー（email, name, plan）
+  - `otps` - ワンタイムパスワード（email, code, expires_at, used）
+  - `cards` - レビューカード（store_name, google_url, short_code, template, cta_text）
+  - `clicks` - クリック追跡（card_id, user_agent, referer）
 
-## Development
+## Tech Stack
+- **Backend**: Hono (TypeScript)
+- **Frontend**: Vanilla JS + Tailwind CSS CDN + FontAwesome
+- **QR Code**: uqr (ECC H)
+- **PDF**: pdf-lib + @pdf-lib/fontkit + Noto Sans JP
+- **Authentication**: OTP email (Resend API) + JWT
+- **Database**: Cloudflare D1 (SQLite)
+- **Deployment**: Cloudflare Pages
 
+## OTPメール設定（本番環境）
+Resend APIキーを設定することで、OTPコードがメールで送信されます:
 ```bash
-# Local development
-npm run build
-pm2 start ecosystem.config.cjs
-
-# DB operations
-npx wrangler d1 migrations apply revuq-production --local
-npx wrangler d1 execute revuq-production --local --file=./seed.sql
-
-# Deploy
-npm run build && npx wrangler pages deploy dist --project-name revuq
-npx wrangler d1 migrations apply revuq-production --remote
+npx wrangler pages secret put RESEND_API_KEY --project-name revuq
+# オプション: 送信元メールアドレスをカスタマイズ
+npx wrangler pages secret put OTP_FROM_EMAIL --project-name revuq
 ```
 
-## 本番運用への残タスク
-
-### 高優先度
-- [ ] メール送信: Resend/SendGrid連携でOTPを実際にメール送信
-- [ ] R2有効化: 画像をR2に移行（現在はBase64でD1保存）
-- [ ] JWT_SECRET: `wrangler secret put JWT_SECRET`で本番用シークレット設定
-- [ ] ADMIN_PASSWORD: `wrangler secret put ADMIN_PASSWORD`で管理者パスワード設定
-- [ ] 管理者認証: ADMIN_EMAILS設定を本番メールアドレスに変更
-
-### 中優先度
-- [ ] カスタムドメイン: revuq.jp / revuq.link 取得＋設定
-- [ ] Tailwind CSS: CDNからPostCSS/CLIに移行
-- [ ] エラーハンドリング: グローバルエラーハンドラ追加
-- [ ] レート制限: OTP送信に制限追加
-
-### 低優先度
-- [ ] 法務ページ: 利用規約、プライバシーポリシー、特定商取引法表記
-- [ ] 有料プラン: Stripe連携、カード枚数制限
-- [ ] アナリティクス: 日別クリック推移グラフ
-- [ ] PWA: オフライン対応
-
 ## Deployment
-- **Platform**: Cloudflare Pages + D1
-- **Status**: ✅ Active (Production)
-- **Last Updated**: 2026-02-13
+- **Platform**: Cloudflare Pages
+- **Project Name**: revuq
+- **Last Updated**: 2026-02-14
