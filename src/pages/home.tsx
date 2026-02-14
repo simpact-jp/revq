@@ -15,71 +15,51 @@ export const HomePage = () => {
   return (
     <div>
       {/* ============================================================
-          HERO SECTION — Analytics dashboard cover image
+          HERO SECTION — Full-bleed Google reviews cover image
       ============================================================ */}
-      <section class="relative overflow-hidden bg-gradient-to-br from-brand-600 via-brand-700 to-brand-900 text-white">
-        {/* Background decorations */}
-        <div class="absolute inset-0 opacity-10">
-          <div class="absolute top-10 left-10 w-64 h-64 bg-white rounded-full blur-3xl"></div>
-          <div class="absolute bottom-10 right-10 w-96 h-96 bg-brand-300 rounded-full blur-3xl"></div>
+      <section class="relative overflow-hidden text-white min-h-[520px] md:min-h-[600px] flex items-center">
+        {/* Full background image */}
+        <div class="absolute inset-0">
+          <img
+            src="/static/images/hero-reviews.png"
+            alt="Google Map レビューイメージ"
+            class="w-full h-full object-cover"
+          />
+          {/* Dark overlay for text readability */}
+          <div class="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/30"></div>
         </div>
 
-        <div class="relative max-w-6xl mx-auto px-4 sm:px-6 py-16 md:py-24">
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            {/* Left: Copy */}
-            <div>
-              <div class="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm rounded-full px-4 py-1.5 text-sm font-medium mb-6">
-                <i class="fas fa-bolt text-amber-300"></i>
-                登録不要・完全無料
-              </div>
-              <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold leading-tight mb-5">
-                Googleレビュー<br />
-                依頼カードを<br class="sm:hidden" />
-                <span class="text-amber-300">30秒</span>で作成
-              </h1>
-              <p class="text-lg sm:text-xl text-blue-100 leading-relaxed mb-8 max-w-lg">
-                GoogleマップのURLを貼るだけ。<br class="hidden sm:block" />
-                QRコード付きカードを即座に生成し、<br class="hidden sm:block" />
-                読み取りデータを管理画面で分析できます。
-              </p>
-              <div class="flex flex-col sm:flex-row gap-3">
-                <a
-                  href="#create"
-                  class="inline-flex items-center justify-center gap-2 bg-white text-brand-700 px-8 py-4 rounded-xl text-lg font-bold shadow-lg hover:shadow-xl hover:bg-blue-50 transition-all no-underline"
-                >
-                  <i class="fas fa-arrow-down"></i>
-                  今すぐ無料で作る
-                </a>
-                <a
-                  href="/login"
-                  class="inline-flex items-center justify-center gap-2 border-2 border-white/30 text-white px-6 py-4 rounded-xl text-base font-semibold hover:bg-white/10 transition-all no-underline"
-                >
-                  <i class="fas fa-chart-line text-sm"></i>
-                  管理画面を見る
-                </a>
-              </div>
+        <div class="relative max-w-6xl mx-auto px-4 sm:px-6 py-16 md:py-24 w-full">
+          <div class="max-w-xl">
+            <div class="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm rounded-full px-4 py-1.5 text-sm font-medium mb-6">
+              <i class="fas fa-bolt text-amber-300"></i>
+              登録不要・完全無料
             </div>
-
-            {/* Right: Analytics dashboard image */}
-            <div class="hidden lg:flex justify-center">
-              <div class="relative">
-                <div class="absolute -inset-4 bg-white/5 rounded-3xl blur-xl"></div>
-                <img
-                  src="/static/images/hero-analytics.png"
-                  alt="RevQ アナリティクスダッシュボード"
-                  class="relative w-full max-w-lg rounded-2xl shadow-2xl border border-white/10"
-                />
-                {/* Floating stat badge */}
-                <div class="absolute -bottom-4 -left-4 bg-white rounded-xl shadow-lg px-4 py-3 flex items-center gap-3">
-                  <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                    <i class="fas fa-arrow-trend-up text-green-600"></i>
-                  </div>
-                  <div>
-                    <p class="text-xs text-gray-500 font-medium">今月のスキャン数</p>
-                    <p class="text-lg font-bold text-gray-800">+34.2%</p>
-                  </div>
-                </div>
-              </div>
+            <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold leading-tight mb-5 drop-shadow-lg">
+              Googleレビュー<br />
+              依頼カードを<br class="sm:hidden" />
+              <span class="text-amber-300">30秒</span>で作成
+            </h1>
+            <p class="text-lg sm:text-xl text-gray-100 leading-relaxed mb-8 max-w-lg drop-shadow">
+              GoogleマップのURLを貼るだけ。<br class="hidden sm:block" />
+              QRコード付きカードを即座に生成し、<br class="hidden sm:block" />
+              読み取りデータを管理画面で分析できます。
+            </p>
+            <div class="flex flex-col sm:flex-row gap-3">
+              <a
+                href="#create"
+                class="inline-flex items-center justify-center gap-2 bg-white text-brand-700 px-8 py-4 rounded-xl text-lg font-bold shadow-lg hover:shadow-xl hover:bg-blue-50 transition-all no-underline"
+              >
+                <i class="fas fa-arrow-down"></i>
+                今すぐ無料で作る
+              </a>
+              <a
+                href="/login"
+                class="inline-flex items-center justify-center gap-2 border-2 border-white/30 text-white px-6 py-4 rounded-xl text-base font-semibold hover:bg-white/10 transition-all no-underline backdrop-blur-sm"
+              >
+                <i class="fas fa-chart-line text-sm"></i>
+                管理画面を見る
+              </a>
             </div>
           </div>
         </div>
@@ -91,11 +71,7 @@ export const HomePage = () => {
       <section class="bg-white border-b border-gray-100">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 py-16 md:py-24">
           <div class="text-center mb-14">
-            <div class="inline-flex items-center gap-2 bg-brand-50 text-brand-700 rounded-full px-4 py-1.5 text-sm font-semibold mb-4">
-              <i class="fas fa-magic"></i>
-              かんたん2つの機能
-            </div>
-            <h2 class="text-2xl md:text-3xl font-bold text-gray-900">作って、計測する。それだけ。</h2>
+            <h2 class="text-2xl md:text-3xl font-bold text-gray-900">かんたん2つの機能</h2>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
@@ -225,49 +201,65 @@ export const HomePage = () => {
             <p class="text-gray-500 max-w-xl mx-auto">お客様と直接触れ合うすべてのビジネスで、Googleレビューの獲得を加速します。</p>
           </div>
 
-          {/* Industries grid with image */}
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            {/* Left: Image */}
-            <div class="flex justify-center">
-              <img
-                src="/static/images/industries.png"
-                alt="対象業種：飲食店、クリニック、美容室、エステ"
-                class="w-full max-w-md rounded-2xl"
-              />
+          {/* Industries grid — 4 cards with background images */}
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Restaurant / Cafe */}
+            <div class="group relative rounded-2xl overflow-hidden h-64 hover:shadow-xl transition-all">
+              <img src="/static/images/industry-restaurant.png" alt="飲食店・カフェ" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+              <div class="absolute bottom-0 left-0 right-0 p-5">
+                <div class="flex items-center gap-2 mb-2">
+                  <div class="w-8 h-8 bg-orange-500/90 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-utensils text-white text-sm"></i>
+                  </div>
+                  <h3 class="font-bold text-white text-base">飲食店・カフェ</h3>
+                </div>
+                <p class="text-xs text-gray-200 leading-relaxed">テーブルやレジ横にカードを設置。食後の満足度が高いタイミングでレビューを依頼。</p>
+              </div>
             </div>
 
-            {/* Right: Industry cards */}
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div class="bg-orange-50 rounded-xl p-5 border border-orange-100 hover:shadow-md transition-all">
-                <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mb-3">
-                  <i class="fas fa-utensils text-orange-600"></i>
+            {/* Clinic / Dental */}
+            <div class="group relative rounded-2xl overflow-hidden h-64 hover:shadow-xl transition-all">
+              <img src="/static/images/industry-clinic.png" alt="クリニック・歯科" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+              <div class="absolute bottom-0 left-0 right-0 p-5">
+                <div class="flex items-center gap-2 mb-2">
+                  <div class="w-8 h-8 bg-sky-500/90 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-stethoscope text-white text-sm"></i>
+                  </div>
+                  <h3 class="font-bold text-white text-base">クリニック・歯科</h3>
                 </div>
-                <h3 class="font-bold text-gray-900 mb-1">飲食店・カフェ</h3>
-                <p class="text-sm text-gray-500 leading-relaxed">テーブルやレジ横にカードを設置。食後の満足度が高いタイミングでレビューを依頼できます。</p>
+                <p class="text-xs text-gray-200 leading-relaxed">待合室や受付に設置。信頼感のある口コミが集まりやすくなります。</p>
               </div>
+            </div>
 
-              <div class="bg-sky-50 rounded-xl p-5 border border-sky-100 hover:shadow-md transition-all">
-                <div class="w-10 h-10 bg-sky-100 rounded-lg flex items-center justify-center mb-3">
-                  <i class="fas fa-stethoscope text-sky-600"></i>
+            {/* Hair Salon */}
+            <div class="group relative rounded-2xl overflow-hidden h-64 hover:shadow-xl transition-all">
+              <img src="/static/images/industry-salon.png" alt="美容室・ヘアサロン" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+              <div class="absolute bottom-0 left-0 right-0 p-5">
+                <div class="flex items-center gap-2 mb-2">
+                  <div class="w-8 h-8 bg-pink-500/90 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-cut text-white text-sm"></i>
+                  </div>
+                  <h3 class="font-bold text-white text-base">美容室・ヘアサロン</h3>
                 </div>
-                <h3 class="font-bold text-gray-900 mb-1">クリニック・歯科</h3>
-                <p class="text-sm text-gray-500 leading-relaxed">待合室や受付に設置。患者様にとって信頼感のある口コミが集まりやすくなります。</p>
+                <p class="text-xs text-gray-200 leading-relaxed">施術後の仕上がりに満足したお客様から、自然なレビューを獲得。</p>
               </div>
+            </div>
 
-              <div class="bg-pink-50 rounded-xl p-5 border border-pink-100 hover:shadow-md transition-all">
-                <div class="w-10 h-10 bg-pink-100 rounded-lg flex items-center justify-center mb-3">
-                  <i class="fas fa-cut text-pink-600"></i>
+            {/* Spa / Esthetic */}
+            <div class="group relative rounded-2xl overflow-hidden h-64 hover:shadow-xl transition-all">
+              <img src="/static/images/industry-spa.png" alt="エステ・リラクゼーション" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+              <div class="absolute bottom-0 left-0 right-0 p-5">
+                <div class="flex items-center gap-2 mb-2">
+                  <div class="w-8 h-8 bg-purple-500/90 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-spa text-white text-sm"></i>
+                  </div>
+                  <h3 class="font-bold text-white text-base">エステ・リラクゼーション</h3>
                 </div>
-                <h3 class="font-bold text-gray-900 mb-1">美容室・ヘアサロン</h3>
-                <p class="text-sm text-gray-500 leading-relaxed">施術後の仕上がりに満足したお客様から、自然なレビューを獲得。新規集客につながります。</p>
-              </div>
-
-              <div class="bg-purple-50 rounded-xl p-5 border border-purple-100 hover:shadow-md transition-all">
-                <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mb-3">
-                  <i class="fas fa-spa text-purple-600"></i>
-                </div>
-                <h3 class="font-bold text-gray-900 mb-1">エステ・リラクゼーション</h3>
-                <p class="text-sm text-gray-500 leading-relaxed">施術後のリラックスした空間で、体験を共有していただけます。口コミが集客の要になります。</p>
+                <p class="text-xs text-gray-200 leading-relaxed">施術後のリラックスした空間で、体験を共有。口コミが集客の要に。</p>
               </div>
             </div>
           </div>
