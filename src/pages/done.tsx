@@ -141,7 +141,7 @@ export const DonePage = () => {
 
         <p class="text-xs text-gray-400 mb-8">
           <i class="fas fa-info-circle mr-1"></i>
-          PDF下部に「RevuQ」の小さなロゴ表記が入ります
+          PDF下部に「RevQ」の小さなロゴ表記が入ります
         </p>
 
         <hr class="border-gray-100 mb-6" />

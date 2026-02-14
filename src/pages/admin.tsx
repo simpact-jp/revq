@@ -4,7 +4,7 @@ export const AdminPage = () => {
       {/* Page Header */}
       <div class="mb-6">
         <h1 class="text-2xl font-bold text-gray-900">運営管理ダッシュボード</h1>
-        <p class="text-sm text-gray-500 mt-0.5">RevuQ サービス全体の状況を管理します</p>
+        <p class="text-sm text-gray-500 mt-0.5">RevQ サービス全体の状況を管理します</p>
       </div>
 
       {/* Tab Navigation */}
@@ -192,7 +192,7 @@ export const AdminPage = () => {
               <hr class="border-gray-100" />
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="font-semibold text-gray-800 text-sm">PDF下部にRevuQロゴを表示</p>
+                  <p class="font-semibold text-gray-800 text-sm">PDF下部にRevQロゴを表示</p>
                   <p class="text-xs text-gray-400">無料プランではロゴが必ず表示されます</p>
                 </div>
                 <button type="button" class="admin-toggle relative w-12 h-7 rounded-full bg-brand-600 transition-colors" data-active="true">
@@ -228,7 +228,7 @@ export const AdminPage = () => {
               <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-1.5">現在のドメイン</label>
                 <div class="flex items-center gap-2">
-                  <input type="text" value="revuq.link" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 focus:ring-2 focus:ring-brand-200 focus:border-brand-500 outline-none" readonly />
+                  <input type="text" value="revq.link" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 focus:ring-2 focus:ring-brand-200 focus:border-brand-500 outline-none" readonly />
                   <span class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full font-semibold"><i class="fas fa-check mr-0.5"></i>有効</span>
                 </div>
               </div>

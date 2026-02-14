@@ -7,7 +7,7 @@ export const renderer = jsxRenderer(({ children, title }) => {
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>{title || 'RevuQ — Googleレビュー依頼カードを無料作成'}</title>
+        <title>{title || 'RevQ — Googleレビュー依頼カードを無料作成'}</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet" />
         <link href="/static/style.css" rel="stylesheet" />
@@ -43,14 +43,14 @@ export const renderer = jsxRenderer(({ children, title }) => {
               <div class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
                 <span class="text-white font-extrabold text-sm">Q</span>
               </div>
-              <span class={`font-bold text-lg tracking-tight ${isAdmin ? 'text-white' : ''}`}>RevuQ</span>
+              <span class={`font-bold text-lg tracking-tight ${isAdmin ? 'text-white' : ''}`}>RevQ</span>
               {isAdmin && <span class="text-xs bg-amber-500 text-white px-2 py-0.5 rounded-full font-semibold ml-1">Admin</span>}
             </a>
             <nav class="flex items-center gap-3">
               {isAdmin ? (
                 <>
                   <a href="/" class="text-sm text-gray-400 hover:text-white transition-colors px-3 py-2 no-underline">公開サイト</a>
-                  <span class="text-sm text-gray-500 px-2 py-1">admin@revuq.jp</span>
+                  <span class="text-sm text-gray-500 px-2 py-1">admin@revq.jp</span>
                 </>
               ) : (
                 <>
@@ -70,7 +70,7 @@ export const renderer = jsxRenderer(({ children, title }) => {
         {/* Footer */}
         <footer class={`border-t mt-auto ${isAdmin ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
           <div class={`max-w-6xl mx-auto px-4 sm:px-6 py-6 text-center text-sm ${isAdmin ? 'text-gray-500' : 'text-gray-400'}`}>
-            <p>© 2026 RevuQ — プロトタイプ版</p>
+            <p>© 2026 RevQ — プロトタイプ版</p>
           </div>
         </footer>
 

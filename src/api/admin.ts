@@ -1,35 +1,12 @@
 import { Hono } from 'hono'
-import { getCookie } from 'hono/cookie'
 import type { Bindings } from '../lib/types'
-import { verifyJWT } from '../lib/utils'
-
-const JWT_SECRET_DEFAULT = 'revuq-dev-secret-change-in-production'
-const ADMIN_EMAILS = ['admin@revuq.jp'] // Add admin emails here
 
 const admin = new Hono<{ Bindings: Bindings }>()
 
 /**
- * Admin authentication middleware
+ * Admin authentication is handled by Basic Auth middleware in index.tsx
+ * This file only defines the API endpoints.
  */
-admin.use('*', async (c, next) => {
-  const adminPw = c.req.header('x-admin-key') || c.req.query('admin_key')
-  const envPw = c.env.ADMIN_PASSWORD || 'revuq-admin-2026'
-  if (adminPw === envPw) {
-    return next()
-  }
-
-  const token = getCookie(c, 'token')
-  if (token) {
-    const secret = c.env.JWT_SECRET || JWT_SECRET_DEFAULT
-    const payload = await verifyJWT(token, secret)
-    if (payload?.email && ADMIN_EMAILS.includes(payload.email as string)) {
-      return next()
-    }
-  }
-
-  // For prototype: allow all access (remove in production!)
-  return next()
-})
 
 /**
  * GET /api/admin/stats

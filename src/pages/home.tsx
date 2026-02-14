@@ -86,10 +86,10 @@ export const HomePage = () => {
                         </svg>
                       </div>
                     </div>
-                    <p class="text-[11px] text-gray-400 font-mono">revuq.link/abc123</p>
+                    <p class="text-[11px] text-gray-400 font-mono">revq.link/abc123</p>
                   </div>
                   <div class="border-t border-gray-100 px-4 py-1.5 bg-gray-50">
-                    <p class="text-[8px] text-gray-400 text-center">Powered by RevuQ</p>
+                    <p class="text-[8px] text-gray-400 text-center">Powered by RevQ</p>
                   </div>
                 </div>
               </div>
@@ -103,7 +103,7 @@ export const HomePage = () => {
       ============================================================ */}
       <section class="bg-white border-b border-gray-100">
         <div class="max-w-5xl mx-auto px-4 sm:px-6 py-16 md:py-20">
-          <h2 class="text-center text-2xl md:text-3xl font-bold text-gray-900 mb-3">RevuQ が選ばれる理由</h2>
+          <h2 class="text-center text-2xl md:text-3xl font-bold text-gray-900 mb-3">RevQ が選ばれる理由</h2>
           <p class="text-center text-gray-500 mb-12 max-w-xl mx-auto">手間なし・無料・すぐ使える。店舗オーナーに最適化されたレビュー依頼ツールです。</p>
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -418,10 +418,10 @@ export const HomePage = () => {
                               </svg>
                             </div>
                           </div>
-                          <p class="text-center text-xs text-gray-500 font-mono tracking-wide">revuq.link/abc123</p>
+                          <p class="text-center text-xs text-gray-500 font-mono tracking-wide">revq.link/abc123</p>
                         </div>
                         <div class="border-t border-gray-200/50 px-4 py-2 bg-white/40">
-                          <p class="text-[9px] text-gray-400 text-center">Powered by RevuQ</p>
+                          <p class="text-[9px] text-gray-400 text-center">Powered by RevQ</p>
                         </div>
                       </div>
                     </div>

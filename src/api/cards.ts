@@ -5,7 +5,7 @@ import { generateShortCode, verifyJWT } from '../lib/utils'
 import { generateQRSvg } from '../lib/qr'
 import { generateCardPDF } from '../lib/pdf'
 
-const JWT_SECRET_DEFAULT = 'revuq-dev-secret-change-in-production'
+const JWT_SECRET_DEFAULT = 'revq-dev-secret-change-in-production'
 
 const cards = new Hono<{ Bindings: Bindings }>()
 
@@ -238,9 +238,9 @@ cards.get('/:id/pdf', async (c) => {
 
   // Use short_code for filename to avoid non-ASCII header issues
   const layoutSuffix = layout !== 'card' ? `_${layout}` : ''
-  const safeFileName = `RevuQ_${card.short_code}${layoutSuffix}.pdf`
+  const safeFileName = `RevQ_${card.short_code}${layoutSuffix}.pdf`
   const utf8FileName = card.store_name
-    ? `RevuQ_${(card.store_name as string).replace(/\s+/g, '_')}${layoutSuffix}.pdf`
+    ? `RevQ_${(card.store_name as string).replace(/\s+/g, '_')}${layoutSuffix}.pdf`
     : safeFileName
 
   return new Response(pdfBytes, {

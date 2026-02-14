@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { basicAuth } from 'hono/basic-auth'
 import { renderer } from './renderer'
 import { HomePage } from './pages/home'
 import { DonePage } from './pages/done'
@@ -16,9 +17,24 @@ const app = new Hono<{ Bindings: Bindings }>()
 // CORS for API routes
 app.use('/api/*', cors())
 
+// Basic Auth middleware for admin routes
+// Password can be overridden via ADMIN_PASSWORD environment variable
+app.use('/admin', async (c, next) => {
+  const pw = c.env.ADMIN_PASSWORD || 'revq2026'
+  const auth = basicAuth({ username: 'admin', password: pw, realm: 'RevQ Admin' })
+  return auth(c, next)
+})
+app.use('/api/admin/*', async (c, next) => {
+  const pw = c.env.ADMIN_PASSWORD || 'revq2026'
+  const auth = basicAuth({ username: 'admin', password: pw, realm: 'RevQ Admin' })
+  return auth(c, next)
+})
+
 // Mount API routes
 app.route('/api/auth', authRoutes)
 app.route('/api/cards', cardRoutes)
+
+// Admin API — protected by Basic Auth (middleware defined above)
 app.route('/api/admin', adminRoutes)
 
 // Short URL redirect + click tracking
@@ -29,14 +45,14 @@ app.get('/r/:code', async (c) => {
 
   if (!card) {
     return c.html(`
-      <!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>リンク切れ — RevuQ</title>
+      <!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>リンク切れ — RevQ</title>
       <script src="https://cdn.tailwindcss.com"></script></head>
       <body class="min-h-screen flex items-center justify-center bg-gray-50">
         <div class="text-center p-8">
           <p class="text-6xl mb-4">😕</p>
           <h1 class="text-2xl font-bold text-gray-800 mb-2">リンクが見つかりません</h1>
           <p class="text-gray-500 mb-6">このリンクは無効または削除されています</p>
-          <a href="/" class="text-brand-600 hover:underline">RevuQ トップページへ</a>
+          <a href="/" class="text-brand-600 hover:underline">RevQ トップページへ</a>
         </div>
       </body></html>
     `, 404)
@@ -59,27 +75,27 @@ app.use(renderer)
 
 // Landing / Creation Flow
 app.get('/', (c) => {
-  return c.render(<HomePage />, { title: 'RevuQ — Googleレビュー依頼カードを無料作成' })
+  return c.render(<HomePage />, { title: 'RevQ — Googleレビュー依頼カードを無料作成' })
 })
 
 // Completion / Download — serves as template, JS fills from query params
 app.get('/done', (c) => {
-  return c.render(<DonePage />, { title: '作成完了 — RevuQ' })
+  return c.render(<DonePage />, { title: '作成完了 — RevQ' })
 })
 
 // Login
 app.get('/login', (c) => {
-  return c.render(<LoginPage />, { title: 'ログイン — RevuQ' })
+  return c.render(<LoginPage />, { title: 'ログイン — RevQ' })
 })
 
 // Dashboard (User)
 app.get('/dashboard', (c) => {
-  return c.render(<DashboardPage />, { title: 'マイページ — RevuQ' })
+  return c.render(<DashboardPage />, { title: 'マイページ — RevQ' })
 })
 
-// Admin (Operator)
+// Admin (Operator) — protected by Basic Auth (middleware defined above)
 app.get('/admin', (c) => {
-  return c.render(<AdminPage />, { title: '運営管理 — RevuQ' })
+  return c.render(<AdminPage />, { title: '運営管理 — RevQ' })
 })
 
 export default app

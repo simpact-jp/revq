@@ -1,5 +1,5 @@
 /**
- * RevuQ — Frontend JavaScript
+ * RevQ — Frontend JavaScript
  * Connects to real backend APIs for authentication, card creation,
  * QR generation, PDF download, and admin management.
  */
@@ -402,7 +402,7 @@ function initDonePage() {
         const a = document.createElement('a')
         a.href = url
         const layoutSuffix = selectedLayout !== 'card' ? `_${selectedLayout}_${selectedCopies}` : ''
-        a.download = storeName ? `RevuQ_${storeName.replace(/\s+/g, '_')}${layoutSuffix}.pdf` : `RevuQ_${shortCode}${layoutSuffix}.pdf`
+        a.download = storeName ? `RevQ_${storeName.replace(/\s+/g, '_')}${layoutSuffix}.pdf` : `RevQ_${shortCode}${layoutSuffix}.pdf`
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
@@ -771,7 +771,7 @@ function attachDashboardEvents(container) {
         const a = document.createElement('a')
         a.href = url
         const layoutSuffix = `_${layout}_${copies}`
-        a.download = `RevuQ_${name.replace(/\s+/g, '_')}${layoutSuffix}.pdf`
+        a.download = `RevQ_${name.replace(/\s+/g, '_')}${layoutSuffix}.pdf`
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)

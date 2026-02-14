@@ -47,6 +47,54 @@ async function loadJapaneseFont(doc: PDFDocument): Promise<any> {
 }
 
 /**
+ * Draw proper trim marks (トンボ / crop marks) at the four corners of a rectangle.
+ * Uses standard L-shaped corner marks that extend outward from the card boundary
+ * with a small gap, making it easy to cut along the card edges.
+ *
+ * Each corner has two lines forming an L-shape:
+ *   - A horizontal line extending outward from the corner
+ *   - A vertical line extending outward from the corner
+ * A small gap separates the marks from the actual card boundary.
+ */
+function drawTrimMarks(
+  page: any,
+  cardX: number,
+  cardY: number,
+  cardW: number,
+  cardH: number,
+  markLen: number = 15,
+  gap: number = 3,
+  thickness: number = 0.4
+) {
+  const c = rgb(0, 0, 0) // Trim marks are traditionally black
+  const t = thickness
+
+  // --- Bottom-left corner ---
+  // Horizontal mark going left
+  page.drawRectangle({ x: cardX - gap - markLen, y: cardY - t / 2, width: markLen, height: t, color: c })
+  // Vertical mark going down
+  page.drawRectangle({ x: cardX - t / 2, y: cardY - gap - markLen, width: t, height: markLen, color: c })
+
+  // --- Bottom-right corner ---
+  // Horizontal mark going right
+  page.drawRectangle({ x: cardX + cardW + gap, y: cardY - t / 2, width: markLen, height: t, color: c })
+  // Vertical mark going down
+  page.drawRectangle({ x: cardX + cardW - t / 2, y: cardY - gap - markLen, width: t, height: markLen, color: c })
+
+  // --- Top-left corner ---
+  // Horizontal mark going left
+  page.drawRectangle({ x: cardX - gap - markLen, y: cardY + cardH - t / 2, width: markLen, height: t, color: c })
+  // Vertical mark going up
+  page.drawRectangle({ x: cardX - t / 2, y: cardY + cardH + gap, width: t, height: markLen, color: c })
+
+  // --- Top-right corner ---
+  // Horizontal mark going right
+  page.drawRectangle({ x: cardX + cardW + gap, y: cardY + cardH - t / 2, width: markLen, height: t, color: c })
+  // Vertical mark going up
+  page.drawRectangle({ x: cardX + cardW - t / 2, y: cardY + cardH + gap, width: t, height: markLen, color: c })
+}
+
+/**
  * Draw a single card on a PDF page at specified position and scale
  */
 async function drawCard(
@@ -218,7 +266,7 @@ async function drawCard(
   })
 
   // ---- Footer branding ----
-  const brandText = 'Powered by RevuQ'
+  const brandText = 'Powered by RevQ'
   const brandSize = Math.max(4, 7 * Math.min(sx, sy))
   const brandWidth = font.widthOfTextAtSize(brandText, brandSize)
   const footerH = Math.max(10, 20 * sy)
@@ -326,22 +374,8 @@ async function generateA4SinglePDF(opts: GeneratePDFRequest): Promise<Uint8Array
   const cardX = (A4W - cardW) / 2
   const cardY = (A4H - cardH) / 2 - 10
 
-  // Cut lines (dashed marks at corners)
-  const markLen = 15
-  const markColor = rgb(0.7, 0.7, 0.7)
-  const markW = 0.4
-  const corners = [
-    { cx: cardX, cy: cardY },
-    { cx: cardX + cardW, cy: cardY },
-    { cx: cardX, cy: cardY + cardH },
-    { cx: cardX + cardW, cy: cardY + cardH },
-  ]
-  for (const { cx, cy } of corners) {
-    // horizontal mark as thin rectangle
-    page.drawRectangle({ x: cx - markLen, y: cy - markW / 2, width: markLen * 2, height: markW, color: markColor })
-    // vertical mark as thin rectangle
-    page.drawRectangle({ x: cx - markW / 2, y: cy - markLen, width: markW, height: markLen * 2, color: markColor })
-  }
+  // Draw proper L-shaped trim marks (トンボ) at card corners
+  drawTrimMarks(page, cardX, cardY, cardW, cardH, 18, 4, 0.5)
 
   await drawCard(doc, page, {
     x: cardX, y: cardY, w: cardW, h: cardH,
@@ -351,7 +385,7 @@ async function generateA4SinglePDF(opts: GeneratePDFRequest): Promise<Uint8Array
 
   // Print info header
   const infoSize = 7
-  const infoText = 'RevuQ - A4 Landscape Print Layout (Cut along marks)'
+  const infoText = 'RevQ - A4 Landscape Print Layout (Cut along marks)'
   page.drawText(infoText, {
     x: 30, y: A4H - 25,
     size: infoSize, font, color: rgb(0.7, 0.7, 0.7),
@@ -425,7 +459,7 @@ async function generateA4MultiPDF(opts: GeneratePDFRequest): Promise<Uint8Array>
 
   // Print info header (ASCII only - no Japanese for WinAnsi compatibility)
   const infoSize = 7
-  const infoText = `RevuQ - A4 ${isLandscape ? 'Landscape' : 'Portrait'} Print Layout (${layoutLabel}, ${copies} cards) - Cut along the marks`
+  const infoText = `RevQ - A4 ${isLandscape ? 'Landscape' : 'Portrait'} Print Layout (${layoutLabel}, ${copies} cards) - Cut along the marks`
   page.drawText(infoText, {
     x: margin, y: A4H - 20,
     size: infoSize, font, color: rgb(0.7, 0.7, 0.7),
@@ -437,20 +471,8 @@ async function generateA4MultiPDF(opts: GeneratePDFRequest): Promise<Uint8Array>
       const cx = startX + c * (cardW + gap)
       const cy = startY + (rows - 1 - r) * (cardH + gap)
 
-      // Cut lines at each card corner
-      const markLen = 10
-      const markColor2 = rgb(0.75, 0.75, 0.75)
-      const markW2 = 0.3
-      const cardCorners = [
-        { px: cx, py: cy },
-        { px: cx + cardW, py: cy },
-        { px: cx, py: cy + cardH },
-        { px: cx + cardW, py: cy + cardH },
-      ]
-      for (const { px, py } of cardCorners) {
-        page.drawRectangle({ x: px - markLen, y: py - markW2 / 2, width: markLen * 2, height: markW2, color: markColor2 })
-        page.drawRectangle({ x: px - markW2 / 2, y: py - markLen, width: markW2, height: markLen * 2, color: markColor2 })
-      }
+      // Draw proper L-shaped trim marks (トンボ) at card corners
+      drawTrimMarks(page, cx, cy, cardW, cardH, 10, 2, 0.35)
 
       await drawCard(doc, page, {
         x: cx, y: cy, w: cardW, h: cardH,

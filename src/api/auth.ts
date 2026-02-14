@@ -3,7 +3,7 @@ import { getCookie, setCookie, deleteCookie } from 'hono/cookie'
 import type { Bindings } from '../lib/types'
 import { generateOTPCode, createJWT, verifyJWT } from '../lib/utils'
 
-const JWT_SECRET_DEFAULT = 'revuq-dev-secret-change-in-production'
+const JWT_SECRET_DEFAULT = 'revq-dev-secret-change-in-production'
 
 const auth = new Hono<{ Bindings: Bindings }>()
 
@@ -19,7 +19,7 @@ async function sendOTPEmail(
 ): Promise<boolean> {
   if (!apiKey) return false
 
-  const from = fromEmail || 'RevuQ <noreply@revuq.jp>'
+  const from = fromEmail || 'RevQ <noreply@revq.jp>'
 
   try {
     const res = await fetch('https://api.resend.com/emails', {
@@ -31,7 +31,7 @@ async function sendOTPEmail(
       body: JSON.stringify({
         from,
         to: [email],
-        subject: `[RevuQ] ログインコード: ${code}`,
+        subject: `[RevQ] ログインコード: ${code}`,
         html: `
 <!DOCTYPE html>
 <html lang="ja">
@@ -39,7 +39,7 @@ async function sendOTPEmail(
 <body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
   <div style="max-width:480px;margin:40px auto;background:#fff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;">
     <div style="background:#2563eb;padding:24px;text-align:center;">
-      <h1 style="margin:0;color:#fff;font-size:20px;font-weight:700;">RevuQ</h1>
+      <h1 style="margin:0;color:#fff;font-size:20px;font-weight:700;">RevQ</h1>
     </div>
     <div style="padding:32px 24px;text-align:center;">
       <p style="color:#475569;font-size:15px;margin:0 0 24px;">ログイン用ワンタイムコード</p>
@@ -50,7 +50,7 @@ async function sendOTPEmail(
       <p style="color:#94a3b8;font-size:13px;margin:8px 0 0;">心当たりがない場合は無視してください</p>
     </div>
     <div style="background:#f8fafc;padding:16px;text-align:center;border-top:1px solid #e2e8f0;">
-      <p style="margin:0;color:#94a3b8;font-size:11px;">&copy; 2026 RevuQ — Googleレビュー依頼カード作成ツール</p>
+      <p style="margin:0;color:#94a3b8;font-size:11px;">&copy; 2026 RevQ — Googleレビュー依頼カード作成ツール</p>
     </div>
   </div>
 </body>
