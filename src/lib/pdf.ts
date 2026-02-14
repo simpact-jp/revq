@@ -283,6 +283,7 @@ async function generateOriginalCardPDF(opts: GeneratePDFRequest): Promise<Uint8A
 
 /**
  * Generate A4 PDF with a single large card centered (fills most of the page)
+ * Uses LANDSCAPE orientation for better card display
  */
 async function generateA4SinglePDF(opts: GeneratePDFRequest): Promise<Uint8Array> {
   const { storeName, shortCode, shortUrl, template, imageData, ctaText } = opts
@@ -300,12 +301,12 @@ async function generateA4SinglePDF(opts: GeneratePDFRequest): Promise<Uint8Array
     if (loaded) jpFont = loaded
   }
 
-  // A4 portrait: 595.28 x 841.89 pt
-  const A4W = 595.28
-  const A4H = 841.89
+  // A4 LANDSCAPE: swap width/height (841.89 x 595.28 pt)
+  const A4W = 841.89
+  const A4H = 595.28
   const page = doc.addPage([A4W, A4H])
 
-  // Card fills most of A4 with margins, maintaining aspect ratio (420:298 = ~1.41:1)
+  // Card fills most of A4 landscape with margins, maintaining aspect ratio (420:298 = ~1.41:1)
   const margin = 40
   const maxW = A4W - margin * 2
   const maxH = A4H - margin * 2 - 30 // 30pt for header
@@ -350,7 +351,7 @@ async function generateA4SinglePDF(opts: GeneratePDFRequest): Promise<Uint8Array
 
   // Print info header
   const infoSize = 7
-  const infoText = 'RevuQ - A4 Print Layout (Cut along marks)'
+  const infoText = 'RevuQ - A4 Landscape Print Layout (Cut along marks)'
   page.drawText(infoText, {
     x: 30, y: A4H - 25,
     size: infoSize, font, color: rgb(0.7, 0.7, 0.7),
@@ -362,6 +363,7 @@ async function generateA4SinglePDF(opts: GeneratePDFRequest): Promise<Uint8Array
 /**
  * Generate A4 PDF with multiple cards for efficient printing
  * Supports 2, 4, 8 copies per page
+ * 4-split uses LANDSCAPE, 2-split and 8-split use PORTRAIT
  */
 async function generateA4MultiPDF(opts: GeneratePDFRequest): Promise<Uint8Array> {
   const { storeName, shortCode, shortUrl, template, imageData, ctaText } = opts
@@ -380,9 +382,10 @@ async function generateA4MultiPDF(opts: GeneratePDFRequest): Promise<Uint8Array>
     if (loaded) jpFont = loaded
   }
 
-  // A4 portrait: 595.28 x 841.89 pt
-  const A4W = 595.28
-  const A4H = 841.89
+  // 4-split uses LANDSCAPE orientation, 2-split and 8-split use PORTRAIT
+  const isLandscape = copies > 2 && copies <= 4
+  const A4W = isLandscape ? 841.89 : 595.28
+  const A4H = isLandscape ? 595.28 : 841.89
   const margin = 25
   const gap = 8
   const headerSpace = 25
@@ -392,7 +395,7 @@ async function generateA4MultiPDF(opts: GeneratePDFRequest): Promise<Uint8Array>
   if (copies <= 2) {
     cols = 1; rows = 2
   } else if (copies <= 4) {
-    cols = 2; rows = 2
+    cols = 2; rows = 2  // landscape: 2 cols x 2 rows
   } else {
     cols = 2; rows = 4
   }
@@ -418,11 +421,11 @@ async function generateA4MultiPDF(opts: GeneratePDFRequest): Promise<Uint8Array>
   const page = doc.addPage([A4W, A4H])
 
   // Layout label
-  const layoutLabel = copies <= 2 ? '2-split' : copies <= 4 ? '4-split' : '8-split'
+  const layoutLabel = copies <= 2 ? '2-split' : copies <= 4 ? '4-split (Landscape)' : '8-split'
 
   // Print info header (ASCII only - no Japanese for WinAnsi compatibility)
   const infoSize = 7
-  const infoText = `RevuQ - A4 Print Layout (${layoutLabel}, ${copies} cards) - Cut along the marks`
+  const infoText = `RevuQ - A4 ${isLandscape ? 'Landscape' : 'Portrait'} Print Layout (${layoutLabel}, ${copies} cards) - Cut along the marks`
   page.drawText(infoText, {
     x: margin, y: A4H - 20,
     size: infoSize, font, color: rgb(0.7, 0.7, 0.7),
