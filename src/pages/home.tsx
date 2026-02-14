@@ -21,7 +21,7 @@ export const HomePage = () => {
         {/* Full background image */}
         <div class="absolute inset-0">
           <img
-            src="/static/images/hero-reviews.png"
+            src="/static/images/hero-map.png"
             alt="Google Map レビューイメージ"
             class="w-full h-full object-cover"
           />
