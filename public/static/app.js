@@ -57,6 +57,7 @@ function initHomePage() {
   const uploadPreview = document.getElementById('upload-preview')
   const previewImage = document.getElementById('preview-image')
   const removeImageBtn = document.getElementById('remove-image')
+  const ctaTextInput = document.getElementById('cta-text-input')
 
   let selectedTemplate = 0
   let selectedTemplateId = 'simple'
@@ -184,6 +185,11 @@ function initHomePage() {
     reader.readAsDataURL(file)
   }
 
+  // --- CTA Text Live Update ---
+  if (ctaTextInput) {
+    ctaTextInput.addEventListener('input', updatePreview)
+  }
+
   // --- Live Preview ---
   function updatePreview() {
     const storeName = storeNameInput ? storeNameInput.value.trim() : ''
@@ -193,6 +199,7 @@ function initHomePage() {
     const previewCardImage = document.getElementById('preview-card-image')
     const previewAccentBar = document.getElementById('preview-accent-bar')
     const previewWrapper = document.getElementById('preview-template-wrapper')
+    const previewCtaText = document.getElementById('preview-cta-text')
 
     if (storeName) {
       previewStoreNameSection.classList.remove('hidden')
@@ -206,6 +213,12 @@ function initHomePage() {
       previewCardImage.src = uploadedImageData
     } else {
       previewImgSection.classList.add('hidden')
+    }
+
+    // Update CTA text in preview
+    if (previewCtaText) {
+      const ctaVal = ctaTextInput ? ctaTextInput.value.trim() : ''
+      previewCtaText.textContent = ctaVal || 'Googleレビューにご協力ください'
     }
 
     const templateStyles = [
@@ -262,11 +275,13 @@ function initHomePage() {
       overlay.classList.remove('hidden')
 
       try {
+        const ctaText = ctaTextInput ? ctaTextInput.value.trim() : ''
         const payload = {
           google_url: googleUrlInput.value.trim(),
           store_name: storeNameInput ? storeNameInput.value.trim() : undefined,
           template: selectedTemplateId,
           image_data: uploadedImageData || undefined,
+          cta_text: ctaText || undefined,
         }
 
         const res = await fetch('/api/cards', {
@@ -297,7 +312,7 @@ function initHomePage() {
 }
 
 /* =============================================
-   DONE PAGE — Completion with real data
+   DONE PAGE — Completion with real data + PDF layout
 ============================================= */
 function initDonePage() {
   const params = new URLSearchParams(window.location.search)
@@ -305,6 +320,10 @@ function initDonePage() {
   const shortCode = params.get('code')
   const shortUrl = params.get('url')
   const storeName = params.get('name')
+
+  // Current layout selection state
+  let selectedLayout = 'a4-single'
+  let selectedCopies = 1
 
   // Update displayed short URL
   const shortUrlEl = document.getElementById('short-url')
@@ -350,20 +369,40 @@ function initDonePage() {
     })
   }
 
-  // PDF Download — real download
+  // --- PDF Layout Selection ---
+  const layoutBtns = document.querySelectorAll('.pdf-layout-btn')
+  layoutBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      // Remove selection from all
+      layoutBtns.forEach(b => {
+        b.classList.remove('border-brand-500', 'ring-2', 'ring-brand-200', 'bg-brand-50')
+        b.classList.add('border-gray-200')
+      })
+      // Select current
+      btn.classList.remove('border-gray-200')
+      btn.classList.add('border-brand-500', 'ring-2', 'ring-brand-200', 'bg-brand-50')
+      
+      selectedLayout = btn.dataset.layout
+      selectedCopies = parseInt(btn.dataset.copies) || 1
+    })
+  })
+
+  // PDF Download — real download with layout
   const downloadBtn = document.getElementById('btn-download-pdf')
   if (downloadBtn && cardId) {
     downloadBtn.addEventListener('click', async () => {
       downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 生成中…'
       downloadBtn.disabled = true
       try {
-        const res = await fetch(`/api/cards/${cardId}/pdf`)
+        const layoutParam = `layout=${selectedLayout}&copies=${selectedCopies}`
+        const res = await fetch(`/api/cards/${cardId}/pdf?${layoutParam}`)
         if (!res.ok) throw new Error('PDF生成に失敗しました')
         const blob = await res.blob()
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = storeName ? `RevuQ_${storeName.replace(/\s+/g, '_')}.pdf` : `RevuQ_${shortCode}.pdf`
+        const layoutSuffix = selectedLayout !== 'card' ? `_${selectedLayout}_${selectedCopies}` : ''
+        a.download = storeName ? `RevuQ_${storeName.replace(/\s+/g, '_')}${layoutSuffix}.pdf` : `RevuQ_${shortCode}${layoutSuffix}.pdf`
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
@@ -398,12 +437,46 @@ function initLoginPage() {
   const btnSendCode = document.getElementById('btn-send-code')
   const btnLogin = document.getElementById('btn-login')
   const btnBackEmail = document.getElementById('btn-back-email')
+  const btnResendCode = document.getElementById('btn-resend-code')
   const emailInput = document.getElementById('login-email')
   const codeInput = document.getElementById('login-code')
   const sentEmailDisplay = document.getElementById('sent-email-display')
   const debugCodeEl = document.getElementById('debug-code-display')
+  const otpEmailSent = document.getElementById('otp-email-sent')
+  const otpFallback = document.getElementById('otp-fallback')
 
   let savedEmail = ''
+
+  async function sendOTP(email) {
+    const res = await fetch('/api/auth/send-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    })
+    const data = await res.json()
+
+    if (!res.ok) throw new Error(data.error || 'コード送信に失敗しました')
+
+    savedEmail = email
+    sentEmailDisplay.textContent = email
+    stepEmail.classList.add('hidden')
+    stepCode.classList.remove('hidden')
+    codeInput.focus()
+
+    // Show appropriate notification based on whether email was actually sent
+    if (data.email_sent) {
+      // Email was sent via Resend API
+      otpEmailSent.classList.remove('hidden')
+      otpFallback.classList.add('hidden')
+    } else {
+      // No email service — show debug code on screen
+      otpEmailSent.classList.add('hidden')
+      otpFallback.classList.remove('hidden')
+      if (data._debug_code && debugCodeEl) {
+        debugCodeEl.textContent = data._debug_code
+      }
+    }
+  }
 
   if (btnSendCode) {
     btnSendCode.addEventListener('click', async () => {
@@ -418,31 +491,29 @@ function initLoginPage() {
       btnSendCode.disabled = true
 
       try {
-        const res = await fetch('/api/auth/send-code', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email }),
-        })
-        const data = await res.json()
-
-        if (!res.ok) throw new Error(data.error || 'コード送信に失敗しました')
-
-        savedEmail = email
-        sentEmailDisplay.textContent = email
-        stepEmail.classList.add('hidden')
-        stepCode.classList.remove('hidden')
-        codeInput.focus()
-
-        // Show debug code in prototype
-        if (data._debug_code && debugCodeEl) {
-          debugCodeEl.textContent = data._debug_code
-          debugCodeEl.parentElement.classList.remove('hidden')
-        }
+        await sendOTP(email)
       } catch (err) {
         alert(err.message)
       } finally {
-        btnSendCode.innerHTML = 'ワンタイムコードを送信 <i class="fas fa-paper-plane text-sm"></i>'
+        btnSendCode.innerHTML = '<i class="fas fa-paper-plane text-sm mr-1"></i> ワンタイムコードを送信'
         btnSendCode.disabled = false
+      }
+    })
+  }
+
+  // Resend OTP
+  if (btnResendCode) {
+    btnResendCode.addEventListener('click', async () => {
+      if (!savedEmail) return
+      btnResendCode.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> 送信中…'
+      btnResendCode.disabled = true
+      try {
+        await sendOTP(savedEmail)
+      } catch (err) {
+        alert(err.message)
+      } finally {
+        btnResendCode.innerHTML = '<i class="fas fa-redo mr-1"></i> 再送信'
+        btnResendCode.disabled = false
       }
     })
   }
@@ -452,6 +523,9 @@ function initLoginPage() {
       stepCode.classList.add('hidden')
       stepEmail.classList.remove('hidden')
       emailInput.focus()
+      // Reset notifications
+      otpEmailSent.classList.add('hidden')
+      otpFallback.classList.add('hidden')
     })
   }
 
@@ -488,7 +562,7 @@ function initLoginPage() {
 }
 
 /* =============================================
-   DASHBOARD PAGE — Real data
+   DASHBOARD PAGE — Real data with PDF layout
 ============================================= */
 async function initDashboardPage() {
   const cardsContainer = document.getElementById('dashboard-cards')
@@ -578,12 +652,28 @@ async function initDashboardPage() {
                   <i class="fas fa-qrcode text-2xl"></i>
                 </div>
               </div>
-              <div class="flex gap-2 flex-1">
-                <button type="button" class="btn-download-card-pdf flex-1 text-xs font-semibold text-brand-600 border border-brand-200 hover:bg-brand-50 px-3 py-2 rounded-lg transition-all" data-card-id="${card.id}" data-name="${escapeHtml(card.store_name || card.short_code)}">
-                  <i class="fas fa-download mr-1"></i>PDF
-                </button>
-                <a href="/api/cards/${card.id}/qr" target="_blank" class="flex-1 text-xs font-semibold text-gray-500 border border-gray-200 hover:bg-gray-50 px-3 py-2 rounded-lg transition-all text-center no-underline">
-                  <i class="fas fa-qrcode mr-1"></i>QR画像
+              <div class="flex gap-2 flex-1 flex-wrap">
+                <div class="relative">
+                  <button type="button" class="btn-pdf-menu text-xs font-semibold text-brand-600 border border-brand-200 hover:bg-brand-50 px-3 py-2 rounded-lg transition-all" data-card-id="${card.id}" data-name="${escapeHtml(card.store_name || card.short_code)}">
+                    <i class="fas fa-download mr-1"></i>PDF <i class="fas fa-caret-down ml-1"></i>
+                  </button>
+                  <div class="pdf-menu hidden absolute bottom-full left-0 mb-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 w-44" data-card-id="${card.id}">
+                    <button type="button" class="btn-dl-pdf w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-brand-50 hover:text-brand-600 rounded-t-lg transition-colors" data-layout="a4-single" data-copies="1">
+                      <i class="fas fa-expand mr-1.5"></i>A4 1枚（拡大）
+                    </button>
+                    <button type="button" class="btn-dl-pdf w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-brand-50 hover:text-brand-600 transition-colors" data-layout="a4-multi" data-copies="2">
+                      <i class="fas fa-columns mr-1.5"></i>A4 2分割
+                    </button>
+                    <button type="button" class="btn-dl-pdf w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-brand-50 hover:text-brand-600 transition-colors" data-layout="a4-multi" data-copies="4">
+                      <i class="fas fa-th-large mr-1.5"></i>A4 4分割
+                    </button>
+                    <button type="button" class="btn-dl-pdf w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-brand-50 hover:text-brand-600 rounded-b-lg transition-colors" data-layout="a4-multi" data-copies="8">
+                      <i class="fas fa-th mr-1.5"></i>A4 8分割
+                    </button>
+                  </div>
+                </div>
+                <a href="/api/cards/${card.id}/qr" target="_blank" class="text-xs font-semibold text-gray-500 border border-gray-200 hover:bg-gray-50 px-3 py-2 rounded-lg transition-all text-center no-underline">
+                  <i class="fas fa-qrcode mr-1"></i>QR
                 </a>
                 <button type="button" class="btn-delete-card text-xs font-semibold text-red-400 border border-red-100 hover:bg-red-50 px-3 py-2 rounded-lg transition-all" data-card-id="${card.id}" data-name="${escapeHtml(card.store_name || card.short_code)}">
                   <i class="fas fa-trash"></i>
@@ -633,27 +723,65 @@ function attachDashboardEvents(container) {
     })
   })
 
-  // PDF download
-  container.querySelectorAll('.btn-download-card-pdf').forEach(btn => {
-    btn.addEventListener('click', async () => {
+  // PDF menu toggle
+  container.querySelectorAll('.btn-pdf-menu').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation()
       const cardId = btn.dataset.cardId
-      const name = btn.dataset.name
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'
-      btn.disabled = true
+      const menu = container.querySelector(`.pdf-menu[data-card-id="${cardId}"]`)
+      if (!menu) return
+      
+      // Close all other menus first
+      container.querySelectorAll('.pdf-menu').forEach(m => {
+        if (m !== menu) m.classList.add('hidden')
+      })
+      menu.classList.toggle('hidden')
+    })
+  })
+
+  // Close menus on outside click
+  document.addEventListener('click', () => {
+    container.querySelectorAll('.pdf-menu').forEach(m => m.classList.add('hidden'))
+  })
+
+  // PDF download with layout
+  container.querySelectorAll('.btn-dl-pdf').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation()
+      const menu = btn.closest('.pdf-menu')
+      const cardId = menu.dataset.cardId
+      const layout = btn.dataset.layout
+      const copies = btn.dataset.copies
+      const menuBtn = container.querySelector(`.btn-pdf-menu[data-card-id="${cardId}"]`)
+      const name = menuBtn ? menuBtn.dataset.name : cardId
+
+      // Close menu
+      menu.classList.add('hidden')
+
+      // Show loading
+      if (menuBtn) {
+        menuBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'
+        menuBtn.disabled = true
+      }
+
       try {
-        const res = await fetch(`/api/cards/${cardId}/pdf`)
+        const res = await fetch(`/api/cards/${cardId}/pdf?layout=${layout}&copies=${copies}`)
         const blob = await res.blob()
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = `RevuQ_${name.replace(/\s+/g, '_')}.pdf`
+        const layoutSuffix = `_${layout}_${copies}`
+        a.download = `RevuQ_${name.replace(/\s+/g, '_')}${layoutSuffix}.pdf`
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
         URL.revokeObjectURL(url)
       } catch { }
-      btn.innerHTML = '<i class="fas fa-download mr-1"></i>PDF'
-      btn.disabled = false
+
+      if (menuBtn) {
+        menuBtn.innerHTML = '<i class="fas fa-download mr-1"></i>PDF <i class="fas fa-caret-down ml-1"></i>'
+        menuBtn.disabled = false
+      }
     })
   })
 
@@ -751,6 +879,7 @@ async function initAdminPage() {
   loadAdminRecentActivity()
   loadAdminUsers()
   loadAdminCards()
+  loadAdminOtp()
 }
 
 async function loadAdminStats() {
@@ -792,6 +921,17 @@ async function loadAdminStats() {
           <p class="text-3xl font-bold text-gray-900">${s.activeCards}</p>
           <p class="text-xs text-gray-400 mt-1">/ ${s.totalCards} 全体</p>
         </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-5">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">OTP発行数</p>
+            <div class="w-8 h-8 bg-sky-100 rounded-lg flex items-center justify-center"><i class="fas fa-envelope text-sky-600 text-sm"></i></div>
+          </div>
+          <p class="text-3xl font-bold text-gray-900">${s.totalOtps || 0}</p>
+          <p class="text-xs ${s.hasResendKey ? 'text-green-500' : 'text-amber-500'} mt-1">
+            <i class="fas ${s.hasResendKey ? 'fa-check-circle' : 'fa-exclamation-circle'} mr-0.5"></i>
+            ${s.hasResendKey ? 'メール送信有効' : 'メール未設定'}
+          </p>
+        </div>
       `
     }
   } catch {}
@@ -804,7 +944,9 @@ async function loadAdminRecentActivity() {
 
     const usersEl = document.getElementById('admin-recent-users')
     if (usersEl && data.recentUsers) {
-      usersEl.innerHTML = data.recentUsers.map(u => `
+      usersEl.innerHTML = data.recentUsers.length === 0
+        ? '<div class="px-5 py-4 text-center text-sm text-gray-400">まだユーザーがいません</div>'
+        : data.recentUsers.map(u => `
         <div class="px-5 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
           <div class="flex items-center gap-3">
             <div class="w-8 h-8 bg-brand-100 rounded-full flex items-center justify-center text-brand-600 text-xs font-bold">${escapeHtml((u.name || u.email).charAt(0))}</div>
@@ -823,7 +965,9 @@ async function loadAdminRecentActivity() {
 
     const cardsEl = document.getElementById('admin-recent-cards')
     if (cardsEl && data.recentCards) {
-      cardsEl.innerHTML = data.recentCards.map(c => `
+      cardsEl.innerHTML = data.recentCards.length === 0
+        ? '<div class="px-5 py-4 text-center text-sm text-gray-400">まだカードがありません</div>'
+        : data.recentCards.map(c => `
         <div class="px-5 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
           <div>
             <p class="text-sm font-semibold text-gray-800">${escapeHtml(c.store_name || '(店名なし)')}</p>
@@ -944,6 +1088,119 @@ async function loadAdminCards() {
 }
 
 /* =============================================
+   ADMIN: OTP / Email Tab
+============================================= */
+async function loadAdminOtp() {
+  try {
+    // Load stats
+    const statsRes = await fetch('/api/admin/stats')
+    const stats = await statsRes.json()
+
+    // Email status card
+    const emailStatusEl = document.getElementById('admin-email-status')
+    if (emailStatusEl) {
+      if (stats.hasResendKey) {
+        emailStatusEl.innerHTML = `
+          <div class="bg-green-50 rounded-xl border border-green-200 p-6">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <i class="fas fa-check-circle text-green-600 text-lg"></i>
+              </div>
+              <div>
+                <h4 class="font-bold text-green-800">メール送信: 有効</h4>
+                <p class="text-sm text-green-600">Resend APIキーが設定されています。OTPコードはメールで送信されます。</p>
+              </div>
+            </div>
+          </div>
+        `
+      } else {
+        emailStatusEl.innerHTML = `
+          <div class="bg-amber-50 rounded-xl border border-amber-200 p-6">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <i class="fas fa-exclamation-triangle text-amber-600 text-lg"></i>
+              </div>
+              <div>
+                <h4 class="font-bold text-amber-800">メール送信: 未設定（プロトタイプモード）</h4>
+                <p class="text-sm text-amber-600">RESEND_API_KEY が未設定のため、OTPコードは画面に表示されます。</p>
+                <p class="text-xs text-amber-500 mt-1">
+                  本番環境で有効にするには: <code class="bg-amber-100 px-1 rounded">wrangler pages secret put RESEND_API_KEY</code>
+                </p>
+              </div>
+            </div>
+          </div>
+        `
+      }
+    }
+
+    // OTP stats grid
+    const otpStatsEl = document.getElementById('admin-otp-stats')
+    if (otpStatsEl) {
+      otpStatsEl.innerHTML = `
+        <div class="bg-white rounded-xl border border-gray-200 p-5">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">OTP総発行数</p>
+            <div class="w-8 h-8 bg-sky-100 rounded-lg flex items-center justify-center"><i class="fas fa-key text-sky-600 text-sm"></i></div>
+          </div>
+          <p class="text-3xl font-bold text-gray-900">${stats.totalOtps || 0}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-5">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">今週のOTP</p>
+            <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center"><i class="fas fa-chart-bar text-green-600 text-sm"></i></div>
+          </div>
+          <p class="text-3xl font-bold text-green-600">${stats.weekOtps || 0}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-5">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">登録ユーザー</p>
+            <div class="w-8 h-8 bg-brand-100 rounded-lg flex items-center justify-center"><i class="fas fa-user-check text-brand-600 text-sm"></i></div>
+          </div>
+          <p class="text-3xl font-bold text-brand-600">${stats.totalUsers || 0}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-5">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">メール送信</p>
+            <div class="w-8 h-8 ${stats.hasResendKey ? 'bg-green-100' : 'bg-amber-100'} rounded-lg flex items-center justify-center">
+              <i class="fas ${stats.hasResendKey ? 'fa-envelope-open text-green-600' : 'fa-envelope text-amber-600'} text-sm"></i>
+            </div>
+          </div>
+          <p class="text-lg font-bold ${stats.hasResendKey ? 'text-green-600' : 'text-amber-600'}">${stats.hasResendKey ? '有効' : '無効'}</p>
+          <p class="text-xs text-gray-400 mt-1">Resend API</p>
+        </div>
+      `
+    }
+
+    // Load recent OTP activity
+    const actRes = await fetch('/api/admin/recent-activity')
+    const actData = await actRes.json()
+    const otpTbody = document.getElementById('admin-otp-tbody')
+    if (otpTbody && actData.recentOtps) {
+      if (actData.recentOtps.length === 0) {
+        otpTbody.innerHTML = '<tr><td colspan="4" class="px-5 py-8 text-center text-gray-400">まだOTPの発行がありません</td></tr>'
+      } else {
+        otpTbody.innerHTML = actData.recentOtps.map(otp => {
+          const isExpired = new Date(otp.expires_at) < new Date()
+          const status = otp.used
+            ? '<span class="inline-flex items-center gap-1 text-xs font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full"><i class="fas fa-check-circle"></i>使用済み</span>'
+            : isExpired
+              ? '<span class="inline-flex items-center gap-1 text-xs font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full"><i class="fas fa-clock"></i>期限切れ</span>'
+              : '<span class="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full"><i class="fas fa-hourglass-half"></i>有効</span>'
+          return `
+            <tr class="hover:bg-gray-50 transition-colors">
+              <td class="px-5 py-3.5 text-gray-800">${escapeHtml(otp.email)}</td>
+              <td class="px-5 py-3.5 text-gray-500">${formatDateTime(otp.created_at)}</td>
+              <td class="px-5 py-3.5 text-gray-500">${formatDateTime(otp.expires_at)}</td>
+              <td class="px-5 py-3.5">${status}</td>
+            </tr>
+          `
+        }).join('')
+      }
+    }
+  } catch {}
+}
+
+/* =============================================
    UTILITIES
 ============================================= */
 function isValidUrl(str) {
@@ -986,5 +1243,13 @@ function formatDate(dateStr) {
   try {
     const d = new Date(dateStr)
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+  } catch { return dateStr }
+}
+
+function formatDateTime(dateStr) {
+  if (!dateStr) return '-'
+  try {
+    const d = new Date(dateStr)
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
   } catch { return dateStr }
 }

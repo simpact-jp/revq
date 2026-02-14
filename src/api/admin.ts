@@ -10,18 +10,14 @@ const admin = new Hono<{ Bindings: Bindings }>()
 
 /**
  * Admin authentication middleware
- * In production: check if user email is in ADMIN_EMAILS
- * In prototype: allow access via admin password header or cookie
  */
 admin.use('*', async (c, next) => {
-  // Check admin password (simpler for prototype)
   const adminPw = c.req.header('x-admin-key') || c.req.query('admin_key')
   const envPw = c.env.ADMIN_PASSWORD || 'revuq-admin-2026'
   if (adminPw === envPw) {
     return next()
   }
 
-  // Check JWT for admin email
   const token = getCookie(c, 'token')
   if (token) {
     const secret = c.env.JWT_SECRET || JWT_SECRET_DEFAULT
@@ -37,7 +33,6 @@ admin.use('*', async (c, next) => {
 
 /**
  * GET /api/admin/stats
- * Dashboard overview statistics
  */
 admin.get('/stats', async (c) => {
   const totalUsers = await c.env.DB.prepare('SELECT COUNT(*) as count FROM users').first()
@@ -45,11 +40,14 @@ admin.get('/stats', async (c) => {
   const activeCards = await c.env.DB.prepare("SELECT COUNT(*) as count FROM cards WHERE status = 'active'").first()
   const totalClicks = await c.env.DB.prepare('SELECT COUNT(*) as count FROM clicks').first()
 
-  // This week stats
   const weekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString()
   const weekUsers = await c.env.DB.prepare('SELECT COUNT(*) as count FROM users WHERE created_at >= ?').bind(weekAgo).first()
   const weekCards = await c.env.DB.prepare('SELECT COUNT(*) as count FROM cards WHERE created_at >= ?').bind(weekAgo).first()
   const weekClicks = await c.env.DB.prepare('SELECT COUNT(*) as count FROM clicks WHERE clicked_at >= ?').bind(weekAgo).first()
+
+  // OTP stats
+  const totalOtps = await c.env.DB.prepare('SELECT COUNT(*) as count FROM otps').first()
+  const weekOtps = await c.env.DB.prepare('SELECT COUNT(*) as count FROM otps WHERE created_at >= ?').bind(weekAgo).first()
 
   return c.json({
     totalUsers: totalUsers?.count || 0,
@@ -59,12 +57,14 @@ admin.get('/stats', async (c) => {
     weekUsers: weekUsers?.count || 0,
     weekCards: weekCards?.count || 0,
     weekClicks: weekClicks?.count || 0,
+    totalOtps: totalOtps?.count || 0,
+    weekOtps: weekOtps?.count || 0,
+    hasResendKey: !!c.env.RESEND_API_KEY,
   })
 })
 
 /**
  * GET /api/admin/users
- * List all users with card/click counts
  */
 admin.get('/users', async (c) => {
   const { results } = await c.env.DB.prepare(`
@@ -82,11 +82,10 @@ admin.get('/users', async (c) => {
 
 /**
  * GET /api/admin/cards
- * List all cards with user info and click counts
  */
 admin.get('/cards', async (c) => {
   const { results } = await c.env.DB.prepare(`
-    SELECT c.id, c.store_name, c.google_url, c.short_code, c.template, c.created_at, c.status,
+    SELECT c.id, c.store_name, c.google_url, c.short_code, c.template, c.cta_text, c.created_at, c.status,
            u.name as user_name, u.email as user_email,
            COUNT(cl.id) as click_count
     FROM cards c
@@ -107,7 +106,6 @@ admin.get('/cards', async (c) => {
 
 /**
  * PUT /api/admin/cards/:id/status
- * Toggle card status (active/paused)
  */
 admin.put('/cards/:id/status', async (c) => {
   const id = c.req.param('id')
@@ -120,8 +118,44 @@ admin.put('/cards/:id/status', async (c) => {
 })
 
 /**
+ * PUT /api/admin/cards/:id
+ * Admin update card (store name, CTA, template)
+ */
+admin.put('/cards/:id', async (c) => {
+  const id = c.req.param('id')
+  const body = await c.req.json<{
+    store_name?: string | null
+    cta_text?: string | null
+    template?: string
+  }>()
+
+  const updates: string[] = []
+  const values: any[] = []
+
+  if (body.store_name !== undefined) {
+    updates.push('store_name = ?')
+    values.push(body.store_name || null)
+  }
+  if (body.cta_text !== undefined) {
+    updates.push('cta_text = ?')
+    values.push(body.cta_text || null)
+  }
+  if (body.template !== undefined) {
+    updates.push('template = ?')
+    values.push(body.template)
+  }
+
+  if (updates.length > 0) {
+    values.push(id)
+    await c.env.DB.prepare(`UPDATE cards SET ${updates.join(', ')} WHERE id = ?`)
+      .bind(...values).run()
+  }
+
+  return c.json({ success: true })
+})
+
+/**
  * DELETE /api/admin/cards/:id
- * Delete a card (admin)
  */
 admin.delete('/cards/:id', async (c) => {
   const id = c.req.param('id')
@@ -132,11 +166,9 @@ admin.delete('/cards/:id', async (c) => {
 
 /**
  * DELETE /api/admin/users/:id
- * Ban/delete a user (admin)
  */
 admin.delete('/users/:id', async (c) => {
   const id = c.req.param('id')
-  // Delete user's clicks and cards first
   await c.env.DB.prepare(`
     DELETE FROM clicks WHERE card_id IN (SELECT id FROM cards WHERE user_id = ?)
   `).bind(id).run()
@@ -147,7 +179,6 @@ admin.delete('/users/:id', async (c) => {
 
 /**
  * GET /api/admin/recent-activity
- * Recent users and cards
  */
 admin.get('/recent-activity', async (c) => {
   const recentUsers = await c.env.DB.prepare(`
@@ -172,9 +203,18 @@ admin.get('/recent-activity', async (c) => {
     LIMIT 5
   `).all()
 
+  // Recent OTP activity
+  const recentOtps = await c.env.DB.prepare(`
+    SELECT email, created_at, used, expires_at
+    FROM otps
+    ORDER BY created_at DESC
+    LIMIT 10
+  `).all()
+
   return c.json({
     recentUsers: recentUsers.results || [],
     recentCards: recentCards.results || [],
+    recentOtps: recentOtps.results || [],
   })
 })
 

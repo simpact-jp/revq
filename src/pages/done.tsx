@@ -45,6 +45,90 @@ export const DonePage = () => {
           </div>
         </div>
 
+        {/* PDF Layout Selection */}
+        <div class="mb-6">
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">印刷レイアウトを選択</label>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="layout-selector">
+            {/* 1枚（A4拡大） */}
+            <button
+              type="button"
+              class="pdf-layout-btn border-2 border-brand-500 ring-2 ring-brand-200 bg-brand-50 rounded-xl p-3 text-center transition-all hover:shadow-md cursor-pointer"
+              data-layout="a4-single"
+              data-copies="1"
+            >
+              <div class="w-full aspect-[3/4] bg-white border border-gray-200 rounded-lg mb-2 flex items-center justify-center relative">
+                <div class="w-3/4 h-3/4 bg-brand-100 rounded border border-brand-200 flex items-center justify-center">
+                  <i class="fas fa-qrcode text-brand-400 text-lg"></i>
+                </div>
+              </div>
+              <p class="text-xs font-bold text-gray-700">1枚（拡大）</p>
+              <p class="text-[10px] text-gray-400">A4全面</p>
+            </button>
+
+            {/* 2分割 */}
+            <button
+              type="button"
+              class="pdf-layout-btn border-2 border-gray-200 rounded-xl p-3 text-center transition-all hover:shadow-md hover:border-gray-300 cursor-pointer"
+              data-layout="a4-multi"
+              data-copies="2"
+            >
+              <div class="w-full aspect-[3/4] bg-white border border-gray-200 rounded-lg mb-2 flex flex-col items-center justify-center gap-1 p-1">
+                <div class="w-3/4 flex-1 bg-gray-100 rounded border border-gray-200 flex items-center justify-center">
+                  <i class="fas fa-qrcode text-gray-300 text-xs"></i>
+                </div>
+                <div class="w-3/4 flex-1 bg-gray-100 rounded border border-gray-200 flex items-center justify-center">
+                  <i class="fas fa-qrcode text-gray-300 text-xs"></i>
+                </div>
+              </div>
+              <p class="text-xs font-bold text-gray-700">2分割</p>
+              <p class="text-[10px] text-gray-400">A4に2枚</p>
+            </button>
+
+            {/* 4分割 */}
+            <button
+              type="button"
+              class="pdf-layout-btn border-2 border-gray-200 rounded-xl p-3 text-center transition-all hover:shadow-md hover:border-gray-300 cursor-pointer"
+              data-layout="a4-multi"
+              data-copies="4"
+            >
+              <div class="w-full aspect-[3/4] bg-white border border-gray-200 rounded-lg mb-2 grid grid-cols-2 grid-rows-2 gap-0.5 p-1">
+                <div class="bg-gray-100 rounded border border-gray-200 flex items-center justify-center">
+                  <i class="fas fa-qrcode text-gray-300 text-[8px]"></i>
+                </div>
+                <div class="bg-gray-100 rounded border border-gray-200 flex items-center justify-center">
+                  <i class="fas fa-qrcode text-gray-300 text-[8px]"></i>
+                </div>
+                <div class="bg-gray-100 rounded border border-gray-200 flex items-center justify-center">
+                  <i class="fas fa-qrcode text-gray-300 text-[8px]"></i>
+                </div>
+                <div class="bg-gray-100 rounded border border-gray-200 flex items-center justify-center">
+                  <i class="fas fa-qrcode text-gray-300 text-[8px]"></i>
+                </div>
+              </div>
+              <p class="text-xs font-bold text-gray-700">4分割</p>
+              <p class="text-[10px] text-gray-400">A4に4枚</p>
+            </button>
+
+            {/* 8分割 */}
+            <button
+              type="button"
+              class="pdf-layout-btn border-2 border-gray-200 rounded-xl p-3 text-center transition-all hover:shadow-md hover:border-gray-300 cursor-pointer"
+              data-layout="a4-multi"
+              data-copies="8"
+            >
+              <div class="w-full aspect-[3/4] bg-white border border-gray-200 rounded-lg mb-2 grid grid-cols-2 grid-rows-4 gap-0.5 p-1">
+                {[1,2,3,4,5,6,7,8].map(() => (
+                  <div class="bg-gray-100 rounded border border-gray-200 flex items-center justify-center">
+                    <span class="w-1.5 h-1.5 bg-gray-300 rounded-sm"></span>
+                  </div>
+                ))}
+              </div>
+              <p class="text-xs font-bold text-gray-700">8分割</p>
+              <p class="text-[10px] text-gray-400">A4に8枚</p>
+            </button>
+          </div>
+        </div>
+
         {/* Download Button */}
         <button
           type="button"

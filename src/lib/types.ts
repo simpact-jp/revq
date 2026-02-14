@@ -4,6 +4,8 @@ export type Bindings = {
   R2?: R2Bucket
   JWT_SECRET?: string
   ADMIN_PASSWORD?: string
+  RESEND_API_KEY?: string
+  OTP_FROM_EMAIL?: string
 }
 
 // DB row types
@@ -24,6 +26,7 @@ export type Card = {
   short_code: string
   template: string
   image_key: string | null
+  cta_text: string | null
   created_at: string
   status: string
 }
@@ -51,8 +54,23 @@ export type CreateCardRequest = {
   store_name?: string
   template?: string
   image_data?: string  // base64 data URI
+  cta_text?: string    // custom CTA text for the card
 }
 
 export type CardWithClicks = Card & {
   click_count: number
+}
+
+// PDF generation options
+export type PDFLayout = 'card' | 'a4-single' | 'a4-multi'
+
+export type GeneratePDFRequest = {
+  storeName?: string | null
+  shortCode: string
+  shortUrl: string
+  template: string
+  imageData?: string | null
+  ctaText?: string | null
+  layout?: PDFLayout
+  copies?: number  // for a4-multi layout: how many cards per page
 }

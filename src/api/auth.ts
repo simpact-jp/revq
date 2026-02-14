@@ -8,8 +8,71 @@ const JWT_SECRET_DEFAULT = 'revuq-dev-secret-change-in-production'
 const auth = new Hono<{ Bindings: Bindings }>()
 
 /**
+ * Send OTP email via Resend API
+ * Returns true if email was sent successfully, false otherwise
+ */
+async function sendOTPEmail(
+  email: string,
+  code: string,
+  apiKey: string | undefined,
+  fromEmail: string | undefined
+): Promise<boolean> {
+  if (!apiKey) return false
+
+  const from = fromEmail || 'RevuQ <noreply@revuq.jp>'
+
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        from,
+        to: [email],
+        subject: `[RevuQ] ログインコード: ${code}`,
+        html: `
+<!DOCTYPE html>
+<html lang="ja">
+<head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <div style="max-width:480px;margin:40px auto;background:#fff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;">
+    <div style="background:#2563eb;padding:24px;text-align:center;">
+      <h1 style="margin:0;color:#fff;font-size:20px;font-weight:700;">RevuQ</h1>
+    </div>
+    <div style="padding:32px 24px;text-align:center;">
+      <p style="color:#475569;font-size:15px;margin:0 0 24px;">ログイン用ワンタイムコード</p>
+      <div style="background:#f1f5f9;border-radius:12px;padding:20px;margin:0 auto 24px;display:inline-block;">
+        <p style="margin:0;font-size:36px;font-weight:800;letter-spacing:0.3em;color:#1e293b;font-family:monospace;">${code}</p>
+      </div>
+      <p style="color:#94a3b8;font-size:13px;margin:0;">このコードは<strong>5分間</strong>有効です</p>
+      <p style="color:#94a3b8;font-size:13px;margin:8px 0 0;">心当たりがない場合は無視してください</p>
+    </div>
+    <div style="background:#f8fafc;padding:16px;text-align:center;border-top:1px solid #e2e8f0;">
+      <p style="margin:0;color:#94a3b8;font-size:11px;">&copy; 2026 RevuQ — Googleレビュー依頼カード作成ツール</p>
+    </div>
+  </div>
+</body>
+</html>`,
+      }),
+    })
+
+    if (!res.ok) {
+      const err = await res.text()
+      console.error('[OTP Email] Resend API error:', res.status, err)
+      return false
+    }
+    return true
+  } catch (e) {
+    console.error('[OTP Email] Failed to send:', e)
+    return false
+  }
+}
+
+/**
  * POST /api/auth/send-code
- * Send OTP code to email (in prototype: just stores in DB, no actual email sent)
+ * Send OTP code to email
  */
 auth.post('/send-code', async (c) => {
   const { email } = await c.req.json<{ email: string }>()
@@ -28,15 +91,18 @@ auth.post('/send-code', async (c) => {
   await c.env.DB.prepare('INSERT INTO otps (email, code, expires_at) VALUES (?, ?, ?)')
     .bind(email, code, expiresAt).run()
 
-  // TODO: Send email via Resend/SendGrid
-  // For prototype, return the code in response (remove in production!)
-  console.log(`[OTP] ${email} -> ${code}`)
+  // Try to send via Resend
+  const emailSent = await sendOTPEmail(email, code, c.env.RESEND_API_KEY, c.env.OTP_FROM_EMAIL)
+  console.log(`[OTP] ${email} -> ${code} (email_sent: ${emailSent})`)
 
   return c.json({
     success: true,
-    message: 'コードを送信しました',
-    // Remove this in production - only for prototype
-    _debug_code: code,
+    message: emailSent
+      ? 'ワンタイムコードをメールで送信しました'
+      : 'コードを生成しました',
+    email_sent: emailSent,
+    // If email was not sent, show code in UI as fallback (prototype mode)
+    ...(!emailSent && { _debug_code: code }),
   })
 })
 

@@ -294,10 +294,10 @@ export const HomePage = () => {
             </div>
           </div>
 
-          {/* ===== STEP 2: Template Selection + Preview ===== */}
+          {/* ===== STEP 2: Template Selection + CTA Text + Preview ===== */}
           <div id="step-2" class="hidden">
             <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
-              {/* Left: Templates */}
+              {/* Left: Templates + CTA Text */}
               <div class="lg:col-span-3">
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8">
                   <div class="flex items-center justify-between mb-6">
@@ -329,6 +329,30 @@ export const HomePage = () => {
                         )}
                       </button>
                     ))}
+                  </div>
+
+                  {/* CTA Text Edit */}
+                  <div class="mt-6 pt-6 border-t border-gray-100">
+                    <h3 class="text-sm font-bold text-gray-900 flex items-center gap-2 mb-3">
+                      <i class="fas fa-pen-fancy text-brand-500"></i>
+                      カード文言の編集
+                    </h3>
+                    <div>
+                      <label class="block text-xs font-semibold text-gray-500 mb-1.5" for="cta-text-input">
+                        カードに表示するメッセージ
+                      </label>
+                      <input
+                        type="text"
+                        id="cta-text-input"
+                        placeholder="Googleレビューにご協力ください"
+                        maxlength={60}
+                        class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all"
+                      />
+                      <p class="mt-1 text-xs text-gray-400">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        未入力の場合は「Googleレビューにご協力ください」が表示されます
+                      </p>
+                    </div>
                   </div>
 
                   <div class="mt-6 flex items-center gap-3">
@@ -370,7 +394,7 @@ export const HomePage = () => {
                           <div id="preview-store-name-section" class="hidden text-center">
                             <p id="preview-store-name" class="font-bold text-lg text-gray-800"></p>
                           </div>
-                          <p class="text-center text-sm font-semibold text-gray-700">Googleレビューにご協力ください</p>
+                          <p id="preview-cta-text" class="text-center text-sm font-semibold text-gray-700">Googleレビューにご協力ください</p>
                           <div class="flex justify-center">
                             <div class="w-28 h-28 bg-white border-2 border-gray-300 rounded-lg flex items-center justify-center">
                               <svg viewBox="0 0 100 100" width="96" height="96" class="text-gray-800">

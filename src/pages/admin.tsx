@@ -19,6 +19,9 @@ export const AdminPage = () => {
           <button type="button" class="admin-tab px-5 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition-colors" data-tab="cards">
             <i class="fas fa-id-card mr-1.5"></i>カード
           </button>
+          <button type="button" class="admin-tab px-5 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition-colors" data-tab="otp">
+            <i class="fas fa-envelope mr-1.5"></i>OTP/メール
+          </button>
           <button type="button" class="admin-tab px-5 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition-colors" data-tab="settings">
             <i class="fas fa-cog mr-1.5"></i>設定
           </button>
@@ -28,8 +31,8 @@ export const AdminPage = () => {
       {/* TAB: Overview */}
       <div id="tab-overview" class="admin-tab-content">
         {/* KPI Cards — filled by JS */}
-        <div id="admin-kpi-grid" class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {[1,2,3,4].map(() => (
+        <div id="admin-kpi-grid" class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+          {[1,2,3,4,5].map(() => (
             <div class="bg-white rounded-xl border border-gray-200 p-5 animate-pulse">
               <div class="h-3 w-20 bg-gray-200 rounded mb-3"></div>
               <div class="h-8 w-16 bg-gray-200 rounded"></div>
@@ -110,6 +113,49 @@ export const AdminPage = () => {
               </thead>
               <tbody id="admin-cards-tbody" class="divide-y divide-gray-100">
                 <tr><td colspan={8} class="px-5 py-8 text-center text-gray-400"><i class="fas fa-spinner fa-spin mr-1"></i>読み込み中…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* TAB: OTP / Email */}
+      <div id="tab-otp" class="admin-tab-content hidden">
+        {/* Email Configuration Status */}
+        <div id="admin-email-status" class="mb-6">
+          <div class="bg-white rounded-xl border border-gray-200 p-6 animate-pulse">
+            <div class="h-4 w-32 bg-gray-200 rounded mb-3"></div>
+            <div class="h-3 w-48 bg-gray-200 rounded"></div>
+          </div>
+        </div>
+
+        {/* OTP Stats */}
+        <div id="admin-otp-stats" class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {[1,2,3,4].map(() => (
+            <div class="bg-white rounded-xl border border-gray-200 p-5 animate-pulse">
+              <div class="h-3 w-20 bg-gray-200 rounded mb-3"></div>
+              <div class="h-8 w-16 bg-gray-200 rounded"></div>
+            </div>
+          ))}
+        </div>
+
+        {/* Recent OTP Activity */}
+        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div class="px-5 py-4 border-b border-gray-100">
+            <h3 class="font-bold text-gray-900 text-sm">最近のOTPアクティビティ</h3>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="bg-gray-50 text-left">
+                  <th class="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">メールアドレス</th>
+                  <th class="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">送信日時</th>
+                  <th class="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">有効期限</th>
+                  <th class="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">状態</th>
+                </tr>
+              </thead>
+              <tbody id="admin-otp-tbody" class="divide-y divide-gray-100">
+                <tr><td colspan={4} class="px-5 py-8 text-center text-gray-400"><i class="fas fa-spinner fa-spin mr-1"></i>読み込み中…</td></tr>
               </tbody>
             </table>
           </div>

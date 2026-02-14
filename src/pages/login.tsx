@@ -8,7 +8,7 @@ export const LoginPage = () => {
             <i class="fas fa-user text-brand-600 text-xl"></i>
           </div>
           <h1 class="text-xl font-bold text-gray-900">ログイン</h1>
-          <p class="text-sm text-gray-500 mt-1">管理画面にアクセスできます</p>
+          <p class="text-sm text-gray-500 mt-1">メールアドレスにワンタイムコードを送信します</p>
         </div>
 
         {/* Email Step */}
@@ -31,37 +31,48 @@ export const LoginPage = () => {
               id="btn-send-code"
               class="w-full bg-brand-600 text-white py-3.5 rounded-xl text-base font-bold hover:bg-brand-700 transition-all shadow-sm flex items-center justify-center gap-2"
             >
-              ワンタイムコードを送信
               <i class="fas fa-paper-plane text-sm"></i>
+              ワンタイムコードを送信
             </button>
+
+            <p class="text-xs text-gray-400 text-center">
+              <i class="fas fa-shield-alt mr-1"></i>
+              パスワード不要。毎回メールで届くコードでログインします。
+            </p>
           </div>
         </div>
 
         {/* Code Step */}
         <div id="login-step-code" class="hidden">
           <div class="space-y-4">
-            <p class="text-sm text-gray-600 bg-blue-50 border border-blue-100 rounded-lg p-3">
-              <i class="fas fa-envelope text-blue-400 mr-1"></i>
-              <span id="sent-email-display">you@example.com</span> にコードを送信しました
-            </p>
-
-            {/* Debug code display — remove in production */}
-            <div class="hidden bg-amber-50 border border-amber-200 rounded-lg p-3">
-              <p class="text-xs text-amber-700 font-semibold mb-1">
-                <i class="fas fa-flask mr-1"></i>プロトタイプ — OTPコード:
+            {/* Email sent notification */}
+            <div id="otp-email-sent" class="hidden bg-green-50 border border-green-200 rounded-lg p-3">
+              <p class="text-sm text-green-700">
+                <i class="fas fa-envelope-open-text mr-1"></i>
+                <span id="sent-email-display">you@example.com</span> にコードを送信しました
               </p>
+              <p class="text-xs text-green-600 mt-1">メールを確認して6桁のコードを入力してください（5分間有効）</p>
+            </div>
+
+            {/* Fallback mode (no email service configured) */}
+            <div id="otp-fallback" class="hidden bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <p class="text-xs text-amber-700 font-semibold mb-1">
+                <i class="fas fa-flask mr-1"></i>プロトタイプモード — メール未設定のため画面に表示
+              </p>
+              <p class="text-xs text-amber-600 mb-2">本番環境ではメールで届きます</p>
               <p id="debug-code-display" class="text-2xl font-mono font-bold text-amber-800 tracking-[0.3em] text-center"></p>
             </div>
 
             <div>
               <label class="block text-sm font-semibold text-gray-700 mb-1.5" for="login-code">
-                ワンタイムコード
+                ワンタイムコード（6桁）
               </label>
               <input
                 type="text"
                 id="login-code"
-                placeholder="6桁のコードを入力"
+                placeholder="000000"
                 maxlength={6}
+                inputmode="numeric"
                 class="w-full px-4 py-3 border border-gray-300 rounded-xl text-base text-center tracking-[0.5em] font-mono focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all"
               />
             </div>
@@ -75,23 +86,25 @@ export const LoginPage = () => {
               <i class="fas fa-arrow-right text-sm"></i>
             </button>
 
-            <button
-              type="button"
-              id="btn-back-email"
-              class="w-full text-sm text-gray-500 hover:text-gray-700 py-2 transition-colors"
-            >
-              <i class="fas fa-arrow-left mr-1"></i>
-              メールアドレスを変更
-            </button>
+            <div class="flex items-center justify-between">
+              <button
+                type="button"
+                id="btn-back-email"
+                class="text-sm text-gray-500 hover:text-gray-700 py-2 transition-colors"
+              >
+                <i class="fas fa-arrow-left mr-1"></i>
+                メールアドレスを変更
+              </button>
+              <button
+                type="button"
+                id="btn-resend-code"
+                class="text-sm text-brand-600 hover:text-brand-700 py-2 transition-colors font-semibold"
+              >
+                <i class="fas fa-redo mr-1"></i>
+                再送信
+              </button>
+            </div>
           </div>
-        </div>
-
-        {/* Notice */}
-        <div class="mt-6 p-3 bg-amber-50 border border-amber-100 rounded-lg text-center">
-          <p class="text-xs text-amber-700">
-            <i class="fas fa-flask mr-1"></i>
-            プロトタイプ版: OTPコードはメール送信されず画面に表示されます
-          </p>
         </div>
       </div>
 
