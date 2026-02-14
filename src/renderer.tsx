@@ -69,8 +69,15 @@ export const renderer = jsxRenderer(({ children, title }) => {
 
         {/* Footer */}
         <footer class={`border-t mt-auto ${isAdmin ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
-          <div class={`max-w-6xl mx-auto px-4 sm:px-6 py-6 text-center text-sm ${isAdmin ? 'text-gray-500' : 'text-gray-400'}`}>
-            <p>© 2026 RevQ — プロトタイプ版</p>
+          <div class={`max-w-6xl mx-auto px-4 sm:px-6 py-6 text-sm ${isAdmin ? 'text-gray-500' : 'text-gray-400'}`}>
+            {!isAdmin && (
+              <div class="flex items-center justify-center gap-4 mb-3">
+                <a href="/privacy" class="text-gray-400 hover:text-gray-600 transition-colors no-underline">プライバシーポリシー</a>
+                <span class="text-gray-300">|</span>
+                <a href="/terms" class="text-gray-400 hover:text-gray-600 transition-colors no-underline">利用規約</a>
+              </div>
+            )}
+            <p class="text-center">© 2026 RevQ — プロトタイプ版</p>
           </div>
         </footer>
 

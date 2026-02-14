@@ -7,6 +7,8 @@ import { DonePage } from './pages/done'
 import { LoginPage } from './pages/login'
 import { DashboardPage } from './pages/dashboard'
 import { AdminPage } from './pages/admin'
+import { PrivacyPage } from './pages/privacy'
+import { TermsPage } from './pages/terms'
 import authRoutes from './api/auth'
 import cardRoutes from './api/cards'
 import adminRoutes from './api/admin'
@@ -91,6 +93,15 @@ app.get('/login', (c) => {
 // Dashboard (User)
 app.get('/dashboard', (c) => {
   return c.render(<DashboardPage />, { title: 'マイページ — RevQ' })
+})
+
+// Legal pages
+app.get('/privacy', (c) => {
+  return c.render(<PrivacyPage />, { title: 'プライバシーポリシー — RevQ' })
+})
+
+app.get('/terms', (c) => {
+  return c.render(<TermsPage />, { title: '利用規約 — RevQ' })
 })
 
 // Admin (Operator) — protected by Basic Auth (middleware defined above)
