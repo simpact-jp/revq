@@ -202,7 +202,7 @@ auth.post('/verify', async (c) => {
   if (mode === 'register') {
     // Registration flow — create user if not exists
     if (!user) {
-      await c.env.DB.prepare('INSERT INTO users (email) VALUES (?)').bind(email).run()
+      await c.env.DB.prepare('INSERT INTO users (email, max_stores, max_cards_per_store) VALUES (?, 2, 2)').bind(email).run()
       user = await c.env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(email).first()
       isNewUser = true
     }
@@ -236,7 +236,7 @@ auth.post('/verify', async (c) => {
           const storeCount = await c.env.DB.prepare(
             'SELECT COUNT(*) as count FROM stores WHERE user_id = ?'
           ).bind(user!.id).first()
-          const maxStores = (user!.max_stores as number) || 3
+          const maxStores = (user!.max_stores as number) || 2
           const currentStoreCount = (storeCount?.count as number) || 0
 
           if (currentStoreCount < maxStores) {

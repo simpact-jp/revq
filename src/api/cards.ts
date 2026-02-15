@@ -54,7 +54,7 @@ cards.post('/', async (c) => {
     const user = await c.env.DB.prepare(
       'SELECT max_stores, max_cards_per_store, max_cards FROM users WHERE id = ?'
     ).bind(userId).first()
-    const maxStores = (user?.max_stores as number) || 3
+    const maxStores = (user?.max_stores as number) || 2
     const maxCardsPerStore = (user?.max_cards_per_store as number) || 2
 
     // Try to find existing store for this google_url
@@ -155,7 +155,7 @@ cards.get('/', async (c) => {
   const user = await c.env.DB.prepare(
     'SELECT max_stores, max_cards_per_store, max_cards FROM users WHERE id = ?'
   ).bind(userId).first()
-  const maxStores = (user?.max_stores as number) || 3
+  const maxStores = (user?.max_stores as number) || 2
   const maxCardsPerStore = (user?.max_cards_per_store as number) || 2
 
   // Get all stores for this user

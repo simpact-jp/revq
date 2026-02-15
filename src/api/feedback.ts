@@ -19,9 +19,10 @@ feedback.post('/', async (c) => {
     return c.json({ error: 'メッセージは2000文字以内にしてください' }, 400)
   }
 
-  // Verify card exists
-  const card = await c.env.DB.prepare('SELECT c.*, u.email as owner_email FROM cards c LEFT JOIN users u ON c.user_id = u.id WHERE c.id = ?')
-    .bind(card_id).first()
+  // Verify card exists and get owner info including plan
+  const card = await c.env.DB.prepare(
+    'SELECT c.*, u.email as owner_email, u.plan as owner_plan FROM cards c LEFT JOIN users u ON c.user_id = u.id WHERE c.id = ?'
+  ).bind(card_id).first()
   if (!card) {
     return c.json({ error: 'カードが見つかりません' }, 404)
   }
@@ -30,8 +31,9 @@ feedback.post('/', async (c) => {
   await c.env.DB.prepare('INSERT INTO feedbacks (card_id, message) VALUES (?, ?)')
     .bind(card_id, message.trim()).run()
 
-  // Send email notification to store owner (async, non-blocking)
-  if (card.owner_email && c.env.RESEND_API_KEY) {
+  // Send email notification only for paid plans (not free)
+  const ownerPlan = (card.owner_plan as string) || 'free'
+  if (ownerPlan !== 'free' && card.owner_email && c.env.RESEND_API_KEY) {
     c.executionCtx.waitUntil(
       sendFeedbackNotification(
         card.owner_email as string,

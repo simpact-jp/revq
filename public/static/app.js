@@ -792,7 +792,7 @@ async function initDashboardPage() {
 
     const cards = data.cards || []
     const stores = data.stores || []
-    const maxStores = data.max_stores || 3
+    const maxStores = data.max_stores || 2
     const maxCardsPerStore = data.max_cards_per_store || 2
 
     // Update stats
