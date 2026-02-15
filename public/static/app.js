@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (path === '/done') initDonePage()
   if (path === '/login') initLoginPage()
   if (path === '/dashboard') initDashboardPage()
+  if (path === '/pricing') initPricingPage()
   if (path === '/admin') initAdminPage()
 
   updateNav()
@@ -779,6 +780,22 @@ async function initDashboardPage() {
 
     // Setup weekly email preference toggle
     setupWeeklyEmailToggle(authData.user.weekly_email)
+
+    // Render plan status
+    renderPlanStatus(authData.user)
+
+    // Handle upgrade=success
+    const urlParams = new URLSearchParams(window.location.search)
+    if (urlParams.get('upgrade') === 'success') {
+      // Show success toast
+      const toast = document.createElement('div')
+      toast.className = 'fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg text-sm font-bold flex items-center gap-2 animate-bounce'
+      toast.innerHTML = '<i class="fas fa-check-circle"></i>Proプランへのアップグレードが完了しました！'
+      document.body.appendChild(toast)
+      setTimeout(() => toast.remove(), 5000)
+      // Clean URL
+      history.replaceState(null, '', '/dashboard')
+    }
   } catch {
     window.location.href = '/login'
     return
@@ -1765,6 +1782,201 @@ async function loadAdminOtp() {
       }
     }
   } catch {}
+}
+
+/* =============================================
+   PRICING PAGE
+============================================= */
+function initPricingPage() {
+  let interval = 'monthly'
+  const toggleBtn = document.getElementById('toggle-interval')
+  const toggleKnob = document.getElementById('toggle-knob')
+  const labelMonthly = document.getElementById('label-monthly')
+  const labelYearly = document.getElementById('label-yearly')
+  const priceAmount = document.getElementById('price-amount')
+  const priceInterval = document.getElementById('price-interval')
+  const yearlyNote = document.getElementById('price-yearly-note')
+  const subscribeBtn = document.getElementById('btn-subscribe-pro')
+
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', () => {
+      interval = interval === 'monthly' ? 'yearly' : 'monthly'
+      updatePriceDisplay()
+    })
+  }
+
+  function updatePriceDisplay() {
+    if (interval === 'yearly') {
+      toggleBtn.classList.remove('bg-gray-300')
+      toggleBtn.classList.add('bg-brand-600')
+      toggleKnob.style.left = 'calc(100% - 1.625rem)'
+      labelMonthly.classList.remove('text-gray-900')
+      labelMonthly.classList.add('text-gray-400')
+      labelYearly.classList.remove('text-gray-400')
+      labelYearly.classList.add('text-gray-900')
+      if (priceAmount) priceAmount.textContent = '¥19,800'
+      if (priceInterval) priceInterval.textContent = '/ 年'
+      if (yearlyNote) {
+        yearlyNote.textContent = '月あたり¥1,650（2ヶ月分お得）'
+        yearlyNote.classList.remove('hidden')
+      }
+    } else {
+      toggleBtn.classList.remove('bg-brand-600')
+      toggleBtn.classList.add('bg-gray-300')
+      toggleKnob.style.left = '0.125rem'
+      labelMonthly.classList.remove('text-gray-400')
+      labelMonthly.classList.add('text-gray-900')
+      labelYearly.classList.remove('text-gray-900')
+      labelYearly.classList.add('text-gray-400')
+      if (priceAmount) priceAmount.textContent = '¥1,980'
+      if (priceInterval) priceInterval.textContent = '/ 月'
+      if (yearlyNote) yearlyNote.classList.add('hidden')
+    }
+  }
+
+  if (subscribeBtn) {
+    subscribeBtn.addEventListener('click', async () => {
+      // Check login
+      try {
+        const authRes = await fetch('/api/auth/me')
+        const authData = await authRes.json()
+        if (!authData.user) {
+          // Not logged in — redirect to login
+          window.location.href = '/login?redirect=pricing'
+          return
+        }
+        if (authData.user.plan === 'pro') {
+          alert('既にProプランをご利用中です。')
+          return
+        }
+      } catch {
+        window.location.href = '/login?redirect=pricing'
+        return
+      }
+
+      subscribeBtn.disabled = true
+      subscribeBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>決済画面へ移動中…'
+
+      try {
+        const res = await fetch('/api/stripe/create-checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ interval }),
+        })
+        const data = await res.json()
+        if (data.url) {
+          window.location.href = data.url
+        } else {
+          throw new Error(data.error || '決済セッションの作成に失敗しました')
+        }
+      } catch (err) {
+        alert(err.message || 'エラーが発生しました')
+        subscribeBtn.disabled = false
+        subscribeBtn.innerHTML = '<i class="fas fa-crown mr-2"></i>Pro プランに申し込む'
+      }
+    })
+  }
+
+  // Check if user is already pro
+  checkProStatus()
+
+  async function checkProStatus() {
+    try {
+      const res = await fetch('/api/auth/me')
+      const data = await res.json()
+      if (data.user && data.user.plan === 'pro') {
+        if (subscribeBtn) {
+          subscribeBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Proプラン利用中'
+          subscribeBtn.disabled = true
+          subscribeBtn.classList.remove('bg-brand-600', 'hover:bg-brand-700', 'shadow-lg')
+          subscribeBtn.classList.add('bg-green-500', 'cursor-default')
+        }
+      }
+    } catch {}
+  }
+
+  // Handle cancel_url redirect
+  const params = new URLSearchParams(window.location.search)
+  if (params.get('upgrade') === 'cancel') {
+    // Could show a toast message
+  }
+}
+
+/* =============================================
+   DASHBOARD — Plan Status Section
+============================================= */
+async function renderPlanStatus(user) {
+  const planContainer = document.getElementById('dashboard-plan')
+  if (!planContainer) return
+
+  const isPro = user.plan === 'pro'
+
+  if (isPro) {
+    const intervalText = user.plan_interval === 'year' ? '年額プラン' : '月額プラン'
+    const expiresText = user.plan_expires_at ? formatDate(user.plan_expires_at) : '-'
+    planContainer.innerHTML = `
+      <div class="bg-gradient-to-r from-brand-600 to-brand-700 rounded-2xl p-5 sm:p-6 text-white shadow-lg">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <i class="fas fa-crown text-amber-300"></i>
+              <span class="text-lg font-bold">Pro プラン</span>
+              <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full">${intervalText}</span>
+            </div>
+            <p class="text-sm text-blue-100">
+              次回更新日: ${expiresText}
+              <span class="mx-2">•</span>
+              店舗数・QR無制限
+            </p>
+          </div>
+          <button type="button" id="btn-manage-subscription" class="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-all">
+            <i class="fas fa-cog mr-1.5"></i>プラン管理
+          </button>
+        </div>
+      </div>
+    `
+    // Manage subscription button
+    const manageBtn = document.getElementById('btn-manage-subscription')
+    if (manageBtn) {
+      manageBtn.addEventListener('click', async () => {
+        manageBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i>読み込み中…'
+        manageBtn.disabled = true
+        try {
+          const res = await fetch('/api/stripe/create-portal', { method: 'POST' })
+          const data = await res.json()
+          if (data.url) {
+            window.location.href = data.url
+          } else {
+            throw new Error(data.error)
+          }
+        } catch (err) {
+          alert(err.message || 'エラーが発生しました')
+          manageBtn.innerHTML = '<i class="fas fa-cog mr-1.5"></i>プラン管理'
+          manageBtn.disabled = false
+        }
+      })
+    }
+  } else {
+    planContainer.innerHTML = `
+      <div class="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-lg font-bold text-gray-900">Free プラン</span>
+              <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">現在のプラン</span>
+            </div>
+            <p class="text-sm text-gray-500">店舗2件・各QR2枚まで</p>
+          </div>
+          <a href="/pricing" class="inline-flex items-center justify-center gap-2 bg-brand-600 text-white font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-brand-700 transition-all shadow-sm no-underline">
+            <i class="fas fa-crown text-amber-300"></i>
+            Pro にアップグレード
+          </a>
+        </div>
+      </div>
+    `
+  }
+
+  planContainer.classList.remove('hidden')
 }
 
 /* =============================================

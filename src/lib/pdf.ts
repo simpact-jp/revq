@@ -114,9 +114,10 @@ async function drawCard(
     font: any
     fontBold: any
     jpFont: any
+    hideBranding?: boolean
   }
 ) {
-  const { x, y, w, h, storeName, shortUrl, template, imageData, ctaText, font, fontBold, jpFont } = opts
+  const { x, y, w, h, storeName, shortUrl, template, imageData, ctaText, font, fontBold, jpFont, hideBranding } = opts
   const color = TEMPLATE_COLORS[template] || TEMPLATE_COLORS.simple
   // Always assume Japanese may be needed (store name, CTA text, or default CTA)
   const needsJpFont = true
@@ -255,19 +256,21 @@ async function drawCard(
     }
   }
 
-  // ---- Footer branding ----
-  const brandText = 'Powered by RevQ'
-  const brandSize = Math.max(4, 7 * Math.min(sx, sy))
-  const brandWidth = font.widthOfTextAtSize(brandText, brandSize)
-  const footerH = Math.max(10, 20 * sy)
-  page.drawRectangle({ x, y, width: w, height: footerH, color: rgb(0.97, 0.97, 0.97) })
-  page.drawText(brandText, {
-    x: x + (w - brandWidth) / 2,
-    y: y + footerH * 0.25,
-    size: brandSize,
-    font,
-    color: rgb(0.6, 0.6, 0.6),
-  })
+  // ---- Footer branding (hidden for Pro plan users) ----
+  if (!hideBranding) {
+    const brandText = 'Powered by RevQ'
+    const brandSize = Math.max(4, 7 * Math.min(sx, sy))
+    const brandWidth = font.widthOfTextAtSize(brandText, brandSize)
+    const footerH = Math.max(10, 20 * sy)
+    page.drawRectangle({ x, y, width: w, height: footerH, color: rgb(0.97, 0.97, 0.97) })
+    page.drawText(brandText, {
+      x: x + (w - brandWidth) / 2,
+      y: y + footerH * 0.25,
+      size: brandSize,
+      font,
+      color: rgb(0.6, 0.6, 0.6),
+    })
+  }
 }
 
 /**
@@ -291,7 +294,7 @@ export async function generateCardPDF(opts: GeneratePDFRequest): Promise<Uint8Ar
  * Generate original A6 landscape card (single card)
  */
 async function generateOriginalCardPDF(opts: GeneratePDFRequest): Promise<Uint8Array> {
-  const { storeName, shortCode, shortUrl, template, imageData, ctaText } = opts
+  const { storeName, shortCode, shortUrl, template, imageData, ctaText, hideBranding } = opts
 
   const doc = await PDFDocument.create()
   doc.registerFontkit(fontkit)
@@ -311,7 +314,7 @@ async function generateOriginalCardPDF(opts: GeneratePDFRequest): Promise<Uint8A
   await drawCard(doc, page, {
     x: 0, y: 0, w: W, h: H,
     storeName, shortCode, shortUrl, template, imageData, ctaText,
-    font, fontBold, jpFont,
+    font, fontBold, jpFont, hideBranding,
   })
 
   return await doc.save()
@@ -322,7 +325,7 @@ async function generateOriginalCardPDF(opts: GeneratePDFRequest): Promise<Uint8A
  * Uses LANDSCAPE orientation for better card display
  */
 async function generateA4SinglePDF(opts: GeneratePDFRequest): Promise<Uint8Array> {
-  const { storeName, shortCode, shortUrl, template, imageData, ctaText } = opts
+  const { storeName, shortCode, shortUrl, template, imageData, ctaText, hideBranding } = opts
 
   const doc = await PDFDocument.create()
   doc.registerFontkit(fontkit)
@@ -366,7 +369,7 @@ async function generateA4SinglePDF(opts: GeneratePDFRequest): Promise<Uint8Array
   await drawCard(doc, page, {
     x: cardX, y: cardY, w: cardW, h: cardH,
     storeName, shortCode, shortUrl, template, imageData, ctaText,
-    font, fontBold, jpFont,
+    font, fontBold, jpFont, hideBranding,
   })
 
   // Print info header
@@ -386,7 +389,7 @@ async function generateA4SinglePDF(opts: GeneratePDFRequest): Promise<Uint8Array
  * 4-split uses LANDSCAPE, 2-split and 8-split use PORTRAIT
  */
 async function generateA4MultiPDF(opts: GeneratePDFRequest): Promise<Uint8Array> {
-  const { storeName, shortCode, shortUrl, template, imageData, ctaText } = opts
+  const { storeName, shortCode, shortUrl, template, imageData, ctaText, hideBranding } = opts
   const copies = opts.copies || 4
 
   const doc = await PDFDocument.create()
@@ -461,7 +464,7 @@ async function generateA4MultiPDF(opts: GeneratePDFRequest): Promise<Uint8Array>
       await drawCard(doc, page, {
         x: cx, y: cy, w: cardW, h: cardH,
         storeName, shortCode, shortUrl, template, imageData, ctaText,
-        font, fontBold, jpFont,
+        font, fontBold, jpFont, hideBranding,
       })
 
       cardIdx++

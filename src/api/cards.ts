@@ -368,6 +368,15 @@ cards.get('/:id/pdf', async (c) => {
   const layout = (c.req.query('layout') || 'card') as PDFLayout
   const copies = parseInt(c.req.query('copies') || '4', 10)
 
+  // Check if card owner is a Pro plan user (hide branding)
+  let hideBranding = false
+  if (card.user_id) {
+    const owner = await c.env.DB.prepare('SELECT plan FROM users WHERE id = ?').bind(card.user_id).first()
+    if (owner && owner.plan === 'pro') {
+      hideBranding = true
+    }
+  }
+
   const pdfBytes = await generateCardPDF({
     storeName: card.store_name as string | null,
     shortCode: card.short_code as string,
@@ -377,6 +386,7 @@ cards.get('/:id/pdf', async (c) => {
     ctaText: card.cta_text as string | null,
     layout,
     copies: Math.min(Math.max(copies, 1), 9),
+    hideBranding,
   })
 
   // Use short_code for filename to avoid non-ASCII header issues

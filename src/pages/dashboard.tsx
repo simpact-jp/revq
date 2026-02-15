@@ -30,6 +30,11 @@ export const DashboardPage = () => {
         </div>
       </div>
 
+      {/* Plan Status Bar */}
+      <div id="dashboard-plan" class="mb-8 hidden">
+        {/* Filled by JS */}
+      </div>
+
       {/* Summary Stats — filled by JS */}
       <div id="dashboard-stats" class="grid grid-cols-3 gap-4 mb-8">
         <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 animate-pulse">

@@ -17,12 +17,22 @@ export const renderer = jsxRenderer(({ children, title }) => {
     url: siteUrl,
     applicationCategory: 'BusinessApplication',
     operatingSystem: 'Web',
-    offers: {
-      '@type': 'Offer',
-      price: '0',
-      priceCurrency: 'JPY',
-      description: '無料プラン：店舗3件・各店舗QRコード2枚まで'
-    },
+    offers: [
+      {
+        '@type': 'Offer',
+        price: '0',
+        priceCurrency: 'JPY',
+        name: 'Freeプラン',
+        description: '無料プラン：店舗2件・各店舗QRコード2枚まで'
+      },
+      {
+        '@type': 'Offer',
+        price: '1980',
+        priceCurrency: 'JPY',
+        name: 'Proプラン（月額）',
+        description: 'Proプラン：店舗数無制限・QR無制限・フィードバック通知メール・RevQロゴ非表示'
+      }
+    ],
     aggregateRating: {
       '@type': 'AggregateRating',
       ratingValue: '4.8',
@@ -155,6 +165,7 @@ export const renderer = jsxRenderer(({ children, title }) => {
                 </>
               ) : (
                 <>
+                  <a href="/pricing" class="text-sm text-gray-500 hover:text-gray-800 transition-colors px-3 py-2 no-underline hidden sm:inline" id="nav-pricing">料金</a>
                   <a href="/login" class="text-sm text-gray-500 hover:text-gray-800 transition-colors px-3 py-2 no-underline" id="nav-login">ログイン</a>
                   <a href="/dashboard" class="text-sm bg-brand-600 text-white hover:bg-brand-700 transition-colors px-4 py-2 rounded-lg no-underline hidden" id="nav-dashboard">管理画面</a>
                 </>
@@ -173,6 +184,8 @@ export const renderer = jsxRenderer(({ children, title }) => {
           <div class={`max-w-6xl mx-auto px-4 sm:px-6 py-6 text-sm ${isAdmin ? 'text-gray-500' : 'text-gray-400'}`}>
             {!isAdmin && (
               <div class="flex items-center justify-center gap-4 mb-3">
+                <a href="/pricing" class="text-gray-400 hover:text-gray-600 transition-colors no-underline">料金プラン</a>
+                <span class="text-gray-300">|</span>
                 <a href="/privacy" class="text-gray-400 hover:text-gray-600 transition-colors no-underline">プライバシーポリシー</a>
                 <span class="text-gray-300">|</span>
                 <a href="/terms" class="text-gray-400 hover:text-gray-600 transition-colors no-underline">利用規約</a>

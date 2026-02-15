@@ -297,8 +297,9 @@ auth.get('/me', async (c) => {
     return c.json({ user: null })
   }
 
-  const user = await c.env.DB.prepare('SELECT id, email, name, plan, weekly_email FROM users WHERE id = ?')
-    .bind(payload.userId).first()
+  const user = await c.env.DB.prepare(
+    'SELECT id, email, name, plan, weekly_email, max_stores, max_cards_per_store, stripe_customer_id, stripe_subscription_id, plan_interval, plan_expires_at FROM users WHERE id = ?'
+  ).bind(payload.userId).first()
 
   return c.json({ user: user || null })
 })

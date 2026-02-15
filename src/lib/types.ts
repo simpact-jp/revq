@@ -8,6 +8,9 @@ export type Bindings = {
   OTP_FROM_EMAIL?: string
   LINK_DOMAIN?: string   // Short URL domain (default: revq.link)
   MAIN_DOMAIN?: string   // Main site domain (default: revq.jp)
+  STRIPE_SECRET_KEY?: string
+  STRIPE_PUBLISHABLE_KEY?: string
+  STRIPE_WEBHOOK_SECRET?: string
 }
 
 // DB row types
@@ -20,6 +23,10 @@ export type User = {
   max_stores: number
   max_cards_per_store: number
   weekly_email: number
+  stripe_customer_id: string | null
+  stripe_subscription_id: string | null
+  plan_interval: string | null
+  plan_expires_at: string | null
   created_at: string
   last_login_at: string | null
 }
@@ -99,4 +106,5 @@ export type GeneratePDFRequest = {
   ctaText?: string | null
   layout?: PDFLayout
   copies?: number  // for a4-multi layout: how many cards per page
+  hideBranding?: boolean  // Pro plan: hide "Powered by RevQ" footer
 }

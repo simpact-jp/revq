@@ -9,10 +9,12 @@ import { DashboardPage } from './pages/dashboard'
 import { AdminPage } from './pages/admin'
 import { PrivacyPage } from './pages/privacy'
 import { TermsPage } from './pages/terms'
+import { PricingPage } from './pages/pricing'
 import authRoutes from './api/auth'
 import cardRoutes from './api/cards'
 import adminRoutes from './api/admin'
 import feedbackRoutes from './api/feedback'
+import stripeRoutes from './api/stripe'
 import { sendWeeklyReports } from './lib/weekly-report'
 import type { Bindings } from './lib/types'
 
@@ -64,6 +66,7 @@ app.use('/api/admin/*', async (c, next) => {
 app.route('/api/auth', authRoutes)
 app.route('/api/cards', cardRoutes)
 app.route('/api/feedback', feedbackRoutes)
+app.route('/api/stripe', stripeRoutes)
 
 // Admin API — protected by Basic Auth (middleware defined above)
 app.route('/api/admin', adminRoutes)
@@ -116,7 +119,13 @@ async function handleShortUrl(c: any, code: string) {
     const storeName = (card.store_name as string) || ''
     const googleUrl = card.google_url as string
     const cardId = card.id as number
-    return c.html(renderGatePage(storeName, googleUrl, cardId, mainSiteUrl))
+    // Check if card owner is Pro (hide branding)
+    let hideBranding = false
+    if (card.user_id) {
+      const owner = await c.env.DB.prepare('SELECT plan FROM users WHERE id = ?').bind(card.user_id).first()
+      if (owner && owner.plan === 'pro') hideBranding = true
+    }
+    return c.html(renderGatePage(storeName, googleUrl, cardId, mainSiteUrl, hideBranding))
   }
 
   // Otherwise, redirect directly to Google Maps URL
@@ -133,7 +142,7 @@ app.get('/r/:code', async (c) => {
  * - "満足" → redirect to Google review
  * - "不満" → show feedback form
  */
-function renderGatePage(storeName: string, googleUrl: string, cardId: number, mainSiteUrl: string = 'https://revq.jp'): string {
+function renderGatePage(storeName: string, googleUrl: string, cardId: number, mainSiteUrl: string = 'https://revq.jp', hideBranding: boolean = false): string {
   const displayName = storeName ? `「${escHtml(storeName)}」` : '当店'
   return `<!DOCTYPE html>
 <html lang="ja">
@@ -174,7 +183,7 @@ function renderGatePage(storeName: string, googleUrl: string, cardId: number, ma
         </button>
       </div>
       <div class="px-6 pb-5">
-        <p class="text-[10px] text-gray-300 text-center">Powered by RevQ</p>
+        ${hideBranding ? '' : '<p class="text-[10px] text-gray-300 text-center">Powered by RevQ</p>'}
       </div>
     </div>
   </div>
@@ -211,7 +220,7 @@ function renderGatePage(storeName: string, googleUrl: string, cardId: number, ma
         <p class="text-gray-500 text-sm leading-relaxed">いただいたフィードバックは<br>サービス改善に活用させていただきます。</p>
       </div>
       <div class="px-6 pb-6">
-        <p class="text-[10px] text-gray-300 text-center">Powered by RevQ</p>
+        ${hideBranding ? '' : '<p class="text-[10px] text-gray-300 text-center">Powered by RevQ</p>'}
       </div>
     </div>
   </div>
@@ -321,6 +330,12 @@ app.get('/privacy', (c) => {
 app.get('/terms', (c) => {
   if (isLinkDomain(c)) return c.redirect(`${getMainSiteUrl(c)}/terms`, 302)
   return c.render(<TermsPage />, { title: '利用規約 — RevQ' })
+})
+
+// Pricing
+app.get('/pricing', (c) => {
+  if (isLinkDomain(c)) return c.redirect(`${getMainSiteUrl(c)}/pricing`, 302)
+  return c.render(<PricingPage />, { title: '料金プラン — RevQ' })
 })
 
 // Admin (Operator) — protected by Basic Auth (middleware defined above)
