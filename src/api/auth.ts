@@ -174,10 +174,52 @@ auth.get('/me', async (c) => {
     return c.json({ user: null })
   }
 
-  const user = await c.env.DB.prepare('SELECT id, email, name, plan FROM users WHERE id = ?')
+  const user = await c.env.DB.prepare('SELECT id, email, name, plan, weekly_email FROM users WHERE id = ?')
     .bind(payload.userId).first()
 
   return c.json({ user: user || null })
+})
+
+/**
+ * GET /api/auth/preferences
+ * Get user preferences (weekly email opt-in, etc.)
+ */
+auth.get('/preferences', async (c) => {
+  const token = getCookie(c, 'token')
+  if (!token) return c.json({ error: 'ログインが必要です' }, 401)
+
+  const secret = c.env.JWT_SECRET || JWT_SECRET_DEFAULT
+  const payload = await verifyJWT(token, secret)
+  if (!payload?.userId) return c.json({ error: 'ログインが必要です' }, 401)
+
+  const user = await c.env.DB.prepare('SELECT weekly_email FROM users WHERE id = ?')
+    .bind(payload.userId).first()
+  if (!user) return c.json({ error: 'ユーザーが見つかりません' }, 404)
+
+  return c.json({ weekly_email: user.weekly_email })
+})
+
+/**
+ * PUT /api/auth/preferences
+ * Update user preferences
+ */
+auth.put('/preferences', async (c) => {
+  const token = getCookie(c, 'token')
+  if (!token) return c.json({ error: 'ログインが必要です' }, 401)
+
+  const secret = c.env.JWT_SECRET || JWT_SECRET_DEFAULT
+  const payload = await verifyJWT(token, secret)
+  if (!payload?.userId) return c.json({ error: 'ログインが必要です' }, 401)
+
+  const body = await c.req.json<{ weekly_email?: number }>()
+
+  if (body.weekly_email !== undefined) {
+    const val = body.weekly_email ? 1 : 0
+    await c.env.DB.prepare('UPDATE users SET weekly_email = ? WHERE id = ?')
+      .bind(val, payload.userId).run()
+  }
+
+  return c.json({ success: true })
 })
 
 /**

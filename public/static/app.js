@@ -590,6 +590,9 @@ async function initDashboardPage() {
     if (userEmailEl) {
       userEmailEl.textContent = authData.user.email
     }
+
+    // Setup weekly email preference toggle
+    setupWeeklyEmailToggle(authData.user.weekly_email)
   } catch {
     window.location.href = '/login'
     return
@@ -986,6 +989,47 @@ function attachDashboardEvents(container) {
         }
       } catch { }
     })
+  })
+}
+
+/* =============================================
+   DASHBOARD: Weekly Email Toggle
+============================================= */
+function setupWeeklyEmailToggle(initialValue) {
+  const settingsSection = document.getElementById('dashboard-settings')
+  const checkbox = document.getElementById('chk-weekly-email')
+  const statusEl = document.getElementById('weekly-email-status')
+  if (!settingsSection || !checkbox) return
+
+  // Show settings section
+  settingsSection.classList.remove('hidden')
+
+  // Set initial state
+  checkbox.checked = initialValue === 1 || initialValue === true
+
+  // Listen for changes
+  checkbox.addEventListener('change', async () => {
+    const newVal = checkbox.checked ? 1 : 0
+    try {
+      const res = await fetch('/api/auth/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ weekly_email: newVal })
+      })
+      if (!res.ok) throw new Error()
+
+      // Show saved status
+      if (statusEl) {
+        statusEl.innerHTML = checkbox.checked
+          ? '<i class="fas fa-check-circle text-green-500 mr-0.5"></i>週刊レポートを受け取ります'
+          : '<i class="fas fa-times-circle text-gray-400 mr-0.5"></i>週刊レポートを停止しました'
+        statusEl.classList.remove('hidden')
+        setTimeout(() => statusEl.classList.add('hidden'), 3000)
+      }
+    } catch {
+      // Revert on error
+      checkbox.checked = !checkbox.checked
+    }
   })
 }
 

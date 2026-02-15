@@ -13,6 +13,7 @@ import authRoutes from './api/auth'
 import cardRoutes from './api/cards'
 import adminRoutes from './api/admin'
 import feedbackRoutes from './api/feedback'
+import { sendWeeklyReports } from './lib/weekly-report'
 import type { Bindings } from './lib/types'
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -40,6 +41,16 @@ app.route('/api/feedback', feedbackRoutes)
 
 // Admin API — protected by Basic Auth (middleware defined above)
 app.route('/api/admin', adminRoutes)
+
+// Admin: manually trigger weekly report (for testing)
+app.post('/api/admin/trigger-weekly-report', async (c) => {
+  const result = await sendWeeklyReports(
+    c.env.DB,
+    c.env.RESEND_API_KEY,
+    c.env.OTP_FROM_EMAIL
+  )
+  return c.json({ success: true, ...result })
+})
 
 // Short URL redirect + click tracking + satisfaction gate
 app.get('/r/:code', async (c) => {
@@ -272,4 +283,17 @@ app.get('/admin', (c) => {
   return c.render(<AdminPage />, { title: '運営管理 — RevQ' })
 })
 
-export default app
+// Cloudflare Workers Cron Trigger handler
+// Runs every Monday at 00:00 UTC (= 09:00 JST)
+const scheduled: ExportedHandlerScheduledHandler<Bindings> = async (event, env, ctx) => {
+  console.log(`[Cron] Triggered at ${new Date().toISOString()} — cron: ${event.cron}`)
+  ctx.waitUntil(
+    sendWeeklyReports(env.DB, env.RESEND_API_KEY, env.OTP_FROM_EMAIL)
+  )
+}
+
+// Export both the Hono app (fetch handler) and the scheduled handler
+export default {
+  fetch: app.fetch,
+  scheduled,
+}

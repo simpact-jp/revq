@@ -60,6 +60,28 @@ export const DashboardPage = () => {
         </div>
       </div>
 
+      {/* Settings — Weekly Email */}
+      <div id="dashboard-settings" class="mt-8 hidden">
+        <div class="bg-white rounded-xl border border-gray-100 p-5 sm:p-6">
+          <h3 class="text-sm font-bold text-gray-800 mb-4">
+            <i class="fas fa-cog mr-1.5 text-gray-400"></i>設定
+          </h3>
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-semibold text-gray-700">週刊レポートメール</p>
+              <p class="text-xs text-gray-400 mt-0.5">毎週月曜 9:00（JST）にQRコード読み取り状況をメールで受け取る</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="chk-weekly-email" class="sr-only peer" checked />
+              <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-600"></div>
+            </label>
+          </div>
+          <p id="weekly-email-status" class="text-[10px] text-gray-400 mt-2 hidden">
+            <i class="fas fa-check-circle text-green-500 mr-0.5"></i>設定を保存しました
+          </p>
+        </div>
+      </div>
+
       {/* Empty state */}
       <div id="dashboard-empty" class="hidden text-center py-16">
         <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
