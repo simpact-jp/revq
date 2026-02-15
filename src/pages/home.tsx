@@ -15,119 +15,52 @@ export const HomePage = () => {
   return (
     <div>
       {/* ============================================================
-          HERO SECTION — Full-bleed with gate feature highlight
+          HERO SECTION — Full-bleed Google reviews cover image
       ============================================================ */}
-      <section class="relative overflow-hidden text-white min-h-[560px] md:min-h-[640px] flex items-center">
-        {/* Gradient background (no image dependency) */}
-        <div class="absolute inset-0 bg-gradient-to-br from-brand-900 via-brand-800 to-indigo-900"></div>
-        {/* Subtle pattern overlay */}
-        <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(circle at 1px 1px, white 1px, transparent 0); background-size: 40px 40px;"></div>
+      <section class="relative overflow-hidden text-white min-h-[520px] md:min-h-[600px] flex items-center">
+        {/* Full background image */}
+        <div class="absolute inset-0">
+          <img
+            src="/static/images/hero-reviews.png"
+            alt="Google Map レビューイメージ"
+            class="w-full h-full object-cover"
+          />
+          {/* Dark overlay for text readability */}
+          <div class="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/30"></div>
+        </div>
 
         <div class="relative max-w-6xl mx-auto px-4 sm:px-6 py-16 md:py-24 w-full">
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            {/* Left: Copy */}
-            <div>
-              <div class="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm rounded-full px-4 py-1.5 text-sm font-medium mb-6">
-                <i class="fas fa-bolt text-amber-300"></i>
-                登録不要・完全無料
-              </div>
-              <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold leading-tight mb-5 drop-shadow-lg">
-                ネガティブレビューを防ぎ<br />
-                <span class="text-amber-300">高評価だけ</span>を<br class="sm:hidden" />
-                Googleに届ける
-              </h1>
-              <p class="text-lg sm:text-xl text-blue-100 leading-relaxed mb-4 max-w-lg drop-shadow">
-                QRコードを読み取ったお客様に、まず「満足 / 不満」を聞く。<br class="hidden sm:block" />
-                満足ならGoogleレビューへ、不満なら店舗に直接フィードバック。<br class="hidden sm:block" />
-                <span class="text-white font-semibold">低評価レビューが公開される前に改善できます。</span>
-              </p>
-              <p class="text-sm text-blue-200/80 mb-8 max-w-lg">
-                さらに、QRコード付きレビュー依頼カードを30秒で作成。読み取りデータの分析、週次レポートメールもすべて無料。
-              </p>
-              <div class="flex flex-col sm:flex-row gap-3">
-                <a
-                  href="#create"
-                  class="inline-flex items-center justify-center gap-2 bg-white text-brand-700 px-8 py-4 rounded-xl text-lg font-bold shadow-lg hover:shadow-xl hover:bg-blue-50 transition-all no-underline"
-                >
-                  <i class="fas fa-arrow-down"></i>
-                  今すぐ無料で作る
-                </a>
-                <a
-                  href="#gate-feature"
-                  class="inline-flex items-center justify-center gap-2 border-2 border-white/30 text-white px-6 py-4 rounded-xl text-base font-semibold hover:bg-white/10 transition-all no-underline backdrop-blur-sm"
-                >
-                  <i class="fas fa-shield-alt text-sm"></i>
-                  ゲート機能を詳しく見る
-                </a>
-              </div>
+          <div class="max-w-xl">
+            <div class="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm rounded-full px-4 py-1.5 text-sm font-medium mb-6">
+              <i class="fas fa-bolt text-amber-300"></i>
+              登録不要・完全無料
             </div>
-
-            {/* Right: Mini visual — Gate demo */}
-            <div class="hidden lg:block">
-              <div class="relative">
-                {/* Phone mockup */}
-                <div class="bg-white/10 backdrop-blur-md rounded-[2rem] p-3 border border-white/20 shadow-2xl max-w-[280px] mx-auto">
-                  <div class="bg-white rounded-[1.5rem] overflow-hidden">
-                    {/* Phone header */}
-                    <div class="bg-gradient-to-r from-brand-600 to-brand-700 px-5 py-4 text-center">
-                      <p class="text-white/70 text-xs font-medium">ご来店ありがとうございます</p>
-                      <p class="text-white text-sm font-bold mt-1">サービスはいかがでしたか？</p>
-                    </div>
-                    {/* Buttons */}
-                    <div class="p-4 space-y-2.5">
-                      <div class="flex items-center gap-3 bg-green-50 border-2 border-green-200 rounded-xl py-3 px-4">
-                        <span class="text-2xl">😊</span>
-                        <span class="text-green-800 font-bold text-sm">満足</span>
-                        <i class="fas fa-arrow-right text-green-400 text-xs ml-auto"></i>
-                      </div>
-                      <div class="flex items-center gap-3 bg-gray-50 border-2 border-gray-200 rounded-xl py-3 px-4">
-                        <span class="text-2xl">😔</span>
-                        <span class="text-gray-700 font-bold text-sm">不満</span>
-                        <i class="fas fa-arrow-right text-gray-400 text-xs ml-auto"></i>
-                      </div>
-                    </div>
-                    <div class="px-4 pb-3">
-                      <p class="text-[9px] text-gray-300 text-center">Powered by RevQ</p>
-                    </div>
-                  </div>
-                </div>
-                {/* Arrow annotations */}
-                <div class="absolute -right-4 top-[40%] translate-x-full">
-                  <div class="bg-green-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg whitespace-nowrap">
-                    <i class="fas fa-star mr-1"></i>Googleレビューへ
-                  </div>
-                </div>
-                <div class="absolute -right-4 top-[60%] translate-x-full">
-                  <div class="bg-gray-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg whitespace-nowrap">
-                    <i class="fas fa-comment-dots mr-1"></i>店舗に直接FB
-                  </div>
-                </div>
-              </div>
+            <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold leading-tight mb-5 drop-shadow-lg">
+              Googleレビュー<br />
+              依頼カードを<br class="sm:hidden" />
+              <span class="text-amber-300">30秒</span>で作成
+            </h1>
+            <p class="text-lg sm:text-xl text-gray-100 leading-relaxed mb-8 max-w-lg drop-shadow">
+              GoogleマップのURLを貼るだけ。<br class="hidden sm:block" />
+              QRコード付きカードを即座に生成し、<br class="hidden sm:block" />
+              読み取りデータを管理画面で分析できます。
+            </p>
+            <div class="flex flex-col sm:flex-row gap-3">
+              <a
+                href="#create"
+                class="inline-flex items-center justify-center gap-2 bg-white text-brand-700 px-8 py-4 rounded-xl text-lg font-bold shadow-lg hover:shadow-xl hover:bg-blue-50 transition-all no-underline"
+              >
+                <i class="fas fa-arrow-down"></i>
+                今すぐ無料で作る
+              </a>
+              <a
+                href="/login"
+                class="inline-flex items-center justify-center gap-2 border-2 border-white/30 text-white px-6 py-4 rounded-xl text-base font-semibold hover:bg-white/10 transition-all no-underline backdrop-blur-sm"
+              >
+                <i class="fas fa-chart-line text-sm"></i>
+                管理画面を見る
+              </a>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================
-          SOCIAL PROOF BAR
-      ============================================================ */}
-      <section class="bg-white border-b border-gray-100">
-        <div class="max-w-4xl mx-auto px-4 py-4 flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-sm text-gray-400">
-          <div class="flex items-center gap-2">
-            <i class="fas fa-shield-alt text-brand-500"></i>
-            <span class="font-semibold text-gray-600">低評価レビューを事前防止</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <i class="fas fa-qrcode text-brand-500"></i>
-            <span>30秒でQR作成</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <i class="fas fa-yen-sign text-brand-500"></i>
-            <span>完全無料</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <i class="fas fa-chart-bar text-brand-500"></i>
-            <span>読み取りデータ分析</span>
           </div>
         </div>
       </section>
@@ -177,13 +110,7 @@ export const HomePage = () => {
 
             {/* Card 2: Satisfaction Gate — FEATURED */}
             <div class="group relative bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-8 border-2 border-amber-300 hover:shadow-xl transition-all ring-2 ring-amber-200/50">
-              {/* Badge */}
-              <div class="absolute -top-3 left-1/2 -translate-x-1/2">
-                <span class="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold px-4 py-1 rounded-full shadow-md">
-                  <i class="fas fa-star mr-1"></i>NEW — 目玉機能
-                </span>
-              </div>
-              <div class="flex items-start gap-5 mt-2">
+              <div class="flex items-start gap-5">
                 <div class="w-14 h-14 bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md group-hover:scale-110 transition-transform">
                   <i class="fas fa-shield-alt text-white text-2xl"></i>
                 </div>
@@ -250,8 +177,13 @@ export const HomePage = () => {
       {/* ============================================================
           GATE FEATURE DEEP DIVE — Large visual section
       ============================================================ */}
-      <section id="gate-feature" class="bg-gradient-to-br from-gray-900 via-gray-900 to-brand-900 text-white border-b border-gray-100">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-20 md:py-28">
+      <section id="gate-feature" class="relative text-white border-b border-gray-100 overflow-hidden">
+        {/* Background image */}
+        <div class="absolute inset-0">
+          <img src="/static/images/gate-bg.png" alt="" class="w-full h-full object-cover" />
+          <div class="absolute inset-0 bg-gradient-to-br from-gray-900/85 via-gray-900/80 to-brand-900/85"></div>
+        </div>
+        <div class="relative max-w-6xl mx-auto px-4 sm:px-6 py-20 md:py-28">
           <div class="text-center mb-16">
             <div class="inline-flex items-center gap-2 bg-amber-500/20 text-amber-300 rounded-full px-4 py-1.5 text-sm font-semibold mb-4">
               <i class="fas fa-shield-alt"></i>
@@ -457,14 +389,12 @@ export const HomePage = () => {
             <p class="text-gray-500 max-w-xl mx-auto">お客様と直接触れ合うすべてのビジネスで、Googleレビュー戦略を強化します。</p>
           </div>
 
-          {/* Industries grid — 4 cards with CSS gradients (no external images) */}
+          {/* Industries grid — 4 cards with background images */}
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Restaurant / Cafe */}
-            <div class="group relative rounded-2xl overflow-hidden h-64 hover:shadow-xl transition-all bg-gradient-to-br from-orange-400 to-red-500">
-              <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-              <div class="absolute top-4 right-4 w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center">
-                <i class="fas fa-utensils text-white/50 text-3xl"></i>
-              </div>
+            <div class="group relative rounded-2xl overflow-hidden h-64 hover:shadow-xl transition-all">
+              <img src="/static/images/industry-restaurant.png" alt="飲食店・カフェ" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
               <div class="absolute bottom-0 left-0 right-0 p-5">
                 <div class="flex items-center gap-2 mb-2">
                   <div class="w-8 h-8 bg-orange-500/90 rounded-lg flex items-center justify-center">
@@ -477,11 +407,9 @@ export const HomePage = () => {
             </div>
 
             {/* Clinic / Dental */}
-            <div class="group relative rounded-2xl overflow-hidden h-64 hover:shadow-xl transition-all bg-gradient-to-br from-sky-400 to-blue-600">
-              <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-              <div class="absolute top-4 right-4 w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center">
-                <i class="fas fa-stethoscope text-white/50 text-3xl"></i>
-              </div>
+            <div class="group relative rounded-2xl overflow-hidden h-64 hover:shadow-xl transition-all">
+              <img src="/static/images/industry-clinic.png" alt="クリニック・歯科" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
               <div class="absolute bottom-0 left-0 right-0 p-5">
                 <div class="flex items-center gap-2 mb-2">
                   <div class="w-8 h-8 bg-sky-500/90 rounded-lg flex items-center justify-center">
@@ -494,11 +422,9 @@ export const HomePage = () => {
             </div>
 
             {/* Hair Salon */}
-            <div class="group relative rounded-2xl overflow-hidden h-64 hover:shadow-xl transition-all bg-gradient-to-br from-pink-400 to-rose-600">
-              <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-              <div class="absolute top-4 right-4 w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center">
-                <i class="fas fa-cut text-white/50 text-3xl"></i>
-              </div>
+            <div class="group relative rounded-2xl overflow-hidden h-64 hover:shadow-xl transition-all">
+              <img src="/static/images/industry-salon.png" alt="美容室・ヘアサロン" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
               <div class="absolute bottom-0 left-0 right-0 p-5">
                 <div class="flex items-center gap-2 mb-2">
                   <div class="w-8 h-8 bg-pink-500/90 rounded-lg flex items-center justify-center">
@@ -511,11 +437,9 @@ export const HomePage = () => {
             </div>
 
             {/* Spa / Esthetic */}
-            <div class="group relative rounded-2xl overflow-hidden h-64 hover:shadow-xl transition-all bg-gradient-to-br from-purple-400 to-violet-600">
-              <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-              <div class="absolute top-4 right-4 w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center">
-                <i class="fas fa-spa text-white/50 text-3xl"></i>
-              </div>
+            <div class="group relative rounded-2xl overflow-hidden h-64 hover:shadow-xl transition-all">
+              <img src="/static/images/industry-spa.png" alt="エステ・リラクゼーション" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
               <div class="absolute bottom-0 left-0 right-0 p-5">
                 <div class="flex items-center gap-2 mb-2">
                   <div class="w-8 h-8 bg-purple-500/90 rounded-lg flex items-center justify-center">
