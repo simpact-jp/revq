@@ -77,7 +77,7 @@ export const renderer = jsxRenderer(({ children, title }) => {
                 <a href="/terms" class="text-gray-400 hover:text-gray-600 transition-colors no-underline">利用規約</a>
               </div>
             )}
-            <p class="text-center">© 2026 RevQ — プロトタイプ版</p>
+            <p class="text-center">© 2026 RevQ — Googleレビュー依頼カード作成ツール</p>
           </div>
         </footer>
 
