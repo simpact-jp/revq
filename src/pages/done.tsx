@@ -146,6 +146,26 @@ export const DonePage = () => {
 
         <hr class="border-gray-100 mb-6" />
 
+        {/* Register CTA (shown for non-logged-in users) */}
+        <div id="done-register-cta" class="hidden bg-gradient-to-r from-brand-50 to-blue-50 border border-brand-200 rounded-xl p-5 mb-6">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 bg-brand-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+              <i class="fas fa-user-plus text-brand-600 text-sm"></i>
+            </div>
+            <div class="flex-1 text-left">
+              <p class="text-sm font-bold text-brand-800">無料登録でさらに便利に</p>
+              <p class="text-xs text-brand-600 mt-1">アクセス解析・満足/不満ゲート・フィードバック受信・週次レポートなどの機能が使えます。作成したQRコードもダッシュボードで管理できます。</p>
+              <a
+                href="/login?mode=register"
+                class="inline-flex items-center gap-1.5 mt-3 px-5 py-2.5 bg-brand-600 text-white rounded-lg text-sm font-bold hover:bg-brand-700 transition-all no-underline shadow-sm"
+              >
+                <i class="fas fa-user-plus text-xs"></i>
+                無料で登録する
+              </a>
+            </div>
+          </div>
+        </div>
+
         {/* Secondary Actions */}
         <div class="flex flex-col sm:flex-row gap-3 justify-center">
           <a
@@ -156,11 +176,12 @@ export const DonePage = () => {
             別デザインで作る
           </a>
           <a
-            href="/login"
-            class="inline-flex items-center justify-center gap-2 px-6 py-3 border border-brand-200 text-brand-600 rounded-xl text-sm font-semibold hover:bg-brand-50 transition-all no-underline"
+            href="/dashboard"
+            id="done-dashboard-link"
+            class="hidden inline-flex items-center justify-center gap-2 px-6 py-3 border border-brand-200 text-brand-600 rounded-xl text-sm font-semibold hover:bg-brand-50 transition-all no-underline"
           >
-            <i class="fas fa-user"></i>
-            ログインして管理する
+            <i class="fas fa-chart-bar"></i>
+            ダッシュボードで管理
           </a>
         </div>
       </div>

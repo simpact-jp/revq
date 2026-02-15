@@ -298,6 +298,15 @@ function initHomePage() {
           throw new Error(data.error || 'カード作成に失敗しました')
         }
 
+        // Save card ID for later claiming (if not logged in)
+        try {
+          const pending = JSON.parse(localStorage.getItem('revq_pending_cards') || '[]')
+          if (!pending.includes(data.card.id)) {
+            pending.push(data.card.id)
+            localStorage.setItem('revq_pending_cards', JSON.stringify(pending))
+          }
+        } catch {}
+
         // Redirect to done page with card info in URL
         const params = new URLSearchParams({
           id: data.card.id,
@@ -391,6 +400,25 @@ function initDonePage() {
     })
   })
 
+  // Show register CTA or dashboard link based on auth state
+  const registerCta = document.getElementById('done-register-cta')
+  const dashboardLink = document.getElementById('done-dashboard-link')
+  fetch('/api/auth/me').then(r => r.json()).then(data => {
+    if (data.user) {
+      // Logged in — show dashboard link, hide register CTA
+      if (dashboardLink) dashboardLink.classList.remove('hidden')
+      if (registerCta) registerCta.classList.add('hidden')
+      // Clear pending cards since user is logged in
+      localStorage.removeItem('revq_pending_cards')
+    } else {
+      // Not logged in — show register CTA
+      if (registerCta) registerCta.classList.remove('hidden')
+      if (dashboardLink) dashboardLink.classList.add('hidden')
+    }
+  }).catch(() => {
+    if (registerCta) registerCta.classList.remove('hidden')
+  })
+
   // PDF Download — real download with layout
   const downloadBtn = document.getElementById('btn-download-pdf')
   if (downloadBtn && cardId) {
@@ -433,13 +461,14 @@ function initDonePage() {
 }
 
 /* =============================================
-   LOGIN PAGE — Real OTP flow
+   LOGIN PAGE — Login / Register with OTP
 ============================================= */
 function initLoginPage() {
   const stepEmail = document.getElementById('login-step-email')
   const stepCode = document.getElementById('login-step-code')
   const btnSendCode = document.getElementById('btn-send-code')
   const btnLogin = document.getElementById('btn-login')
+  const btnLoginLabel = document.getElementById('btn-login-label')
   const btnBackEmail = document.getElementById('btn-back-email')
   const btnResendCode = document.getElementById('btn-resend-code')
   const emailInput = document.getElementById('login-email')
@@ -447,15 +476,109 @@ function initLoginPage() {
   const sentEmailDisplay = document.getElementById('sent-email-display')
   const otpEmailSent = document.getElementById('otp-email-sent')
   const otpError = document.getElementById('otp-error')
+  const otpErrorMsg = document.getElementById('otp-error-message')
+  const otpErrorDetail = document.getElementById('otp-error-detail')
+  const tabLogin = document.getElementById('tab-login')
+  const tabRegister = document.getElementById('tab-register')
+  const authTitle = document.getElementById('auth-title')
+  const authSubtitle = document.getElementById('auth-subtitle')
+  const authInfoText = document.getElementById('auth-info-text')
+  const authTabs = document.getElementById('auth-tabs')
 
+  // Current mode: 'login' or 'register'
+  let authMode = 'login'
   let savedEmail = ''
 
+  // Check URL params for mode (e.g. /login?mode=register)
+  const urlParams = new URLSearchParams(window.location.search)
+  if (urlParams.get('mode') === 'register') {
+    authMode = 'register'
+  }
+
+  // --- Pending card IDs management ---
+  // Saved when user creates cards before logging in
+  function getPendingCardIds() {
+    try {
+      const raw = localStorage.getItem('revq_pending_cards')
+      return raw ? JSON.parse(raw) : []
+    } catch { return [] }
+  }
+
+  function clearPendingCardIds() {
+    localStorage.removeItem('revq_pending_cards')
+  }
+
+  // --- Tab switching ---
+  function updateTabUI() {
+    const isLogin = authMode === 'login'
+
+    // Tab styling
+    if (isLogin) {
+      tabLogin.classList.add('bg-white', 'text-gray-900', 'shadow-sm')
+      tabLogin.classList.remove('text-gray-500')
+      tabRegister.classList.remove('bg-white', 'text-gray-900', 'shadow-sm')
+      tabRegister.classList.add('text-gray-500')
+    } else {
+      tabRegister.classList.add('bg-white', 'text-gray-900', 'shadow-sm')
+      tabRegister.classList.remove('text-gray-500')
+      tabLogin.classList.remove('bg-white', 'text-gray-900', 'shadow-sm')
+      tabLogin.classList.add('text-gray-500')
+    }
+
+    // Text updates
+    authTitle.textContent = isLogin ? 'ログイン' : '新規登録'
+    authSubtitle.textContent = isLogin
+      ? 'メールアドレスにワンタイムコードを送信します'
+      : '無料でアカウントを作成します'
+    authInfoText.innerHTML = isLogin
+      ? '<i class="fas fa-shield-alt mr-1"></i>パスワード不要。毎回メールで届くコードでログインします。'
+      : '<i class="fas fa-gift mr-1"></i>無料プラン: 店舗3件、QRコード各2枚まで。登録後すぐに使えます。'
+    if (btnLoginLabel) {
+      btnLoginLabel.textContent = isLogin ? 'ログイン' : '登録する'
+    }
+  }
+
+  if (tabLogin) {
+    tabLogin.addEventListener('click', () => {
+      authMode = 'login'
+      updateTabUI()
+      // Reset to email step
+      stepCode.classList.add('hidden')
+      stepEmail.classList.remove('hidden')
+      otpEmailSent.classList.add('hidden')
+      otpError.classList.add('hidden')
+    })
+  }
+  if (tabRegister) {
+    tabRegister.addEventListener('click', () => {
+      authMode = 'register'
+      updateTabUI()
+      // Reset to email step
+      stepCode.classList.add('hidden')
+      stepEmail.classList.remove('hidden')
+      otpEmailSent.classList.add('hidden')
+      otpError.classList.add('hidden')
+    })
+  }
+
+  // Initial tab state
+  updateTabUI()
+
+  // --- Show error in notification area ---
+  function showError(message, detail) {
+    otpEmailSent.classList.add('hidden')
+    otpError.classList.remove('hidden')
+    if (otpErrorMsg) otpErrorMsg.textContent = message || 'エラーが発生しました'
+    if (otpErrorDetail) otpErrorDetail.textContent = detail || ''
+  }
+
+  // --- Send OTP ---
   async function sendOTP(email) {
-    // Reset notification states
     otpEmailSent.classList.add('hidden')
     otpError.classList.add('hidden')
 
-    const res = await fetch('/api/auth/send-code', {
+    const endpoint = authMode === 'register' ? '/api/auth/register' : '/api/auth/send-code'
+    const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email }),
@@ -463,9 +586,20 @@ function initLoginPage() {
     const data = await res.json()
 
     if (!res.ok) {
-      // Show error notification but stay on code step if already there
+      // If user not registered and on login tab, suggest switching
+      if (data.code === 'NOT_REGISTERED') {
+        showError('このメールアドレスは登録されていません', '「新規登録」タブからアカウントを作成してください')
+        // Stay on email step — don't move to code step
+        throw new Error('__handled__')
+      }
+      // If user already registered and on register tab, suggest switching
+      if (data.code === 'ALREADY_REGISTERED') {
+        showError('このメールアドレスは既に登録されています', '「ログイン」タブからログインしてください')
+        throw new Error('__handled__')
+      }
+      // Rate limit or other error on resend (code step visible)
       if (!stepCode.classList.contains('hidden')) {
-        otpError.classList.remove('hidden')
+        showError(data.error || 'コード送信に失敗しました', '')
         return
       }
       throw new Error(data.error || 'コード送信に失敗しました')
@@ -475,13 +609,14 @@ function initLoginPage() {
     sentEmailDisplay.textContent = email
     stepEmail.classList.add('hidden')
     stepCode.classList.remove('hidden')
+    authTabs.classList.add('hidden')
     codeInput.focus()
 
-    // Show email sent notification
     otpEmailSent.classList.remove('hidden')
     otpError.classList.add('hidden')
   }
 
+  // --- Send button ---
   if (btnSendCode) {
     btnSendCode.addEventListener('click', async () => {
       const email = emailInput.value.trim()
@@ -498,7 +633,9 @@ function initLoginPage() {
         await sendOTP(email)
         startResendCooldown()
       } catch (err) {
-        alert(err.message)
+        if (err.message !== '__handled__') {
+          showError(err.message, '')
+        }
       } finally {
         btnSendCode.innerHTML = '<i class="fas fa-paper-plane text-sm mr-1"></i> ワンタイムコードを送信'
         btnSendCode.disabled = false
@@ -506,7 +643,7 @@ function initLoginPage() {
     })
   }
 
-  // Resend OTP with cooldown
+  // --- Resend with cooldown ---
   let resendCooldown = false
   function startResendCooldown() {
     resendCooldown = true
@@ -535,24 +672,28 @@ function initLoginPage() {
         await sendOTP(savedEmail)
         startResendCooldown()
       } catch (err) {
-        alert(err.message)
+        if (err.message !== '__handled__') {
+          showError(err.message, '')
+        }
         btnResendCode.innerHTML = '<i class="fas fa-redo mr-1"></i> 再送信'
         btnResendCode.disabled = false
       }
     })
   }
 
+  // --- Back to email step ---
   if (btnBackEmail) {
     btnBackEmail.addEventListener('click', () => {
       stepCode.classList.add('hidden')
       stepEmail.classList.remove('hidden')
+      authTabs.classList.remove('hidden')
       emailInput.focus()
-      // Reset notifications
       otpEmailSent.classList.add('hidden')
       otpError.classList.add('hidden')
     })
   }
 
+  // --- Verify OTP ---
   if (btnLogin) {
     btnLogin.addEventListener('click', async () => {
       const code = codeInput.value.trim()
@@ -562,25 +703,50 @@ function initLoginPage() {
         return
       }
 
-      btnLogin.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> ログイン中…'
+      const label = authMode === 'register' ? '登録中…' : 'ログイン中…'
+      btnLogin.innerHTML = `<i class="fas fa-spinner fa-spin mr-1"></i> ${label}`
       btnLogin.disabled = true
 
       try {
+        const pendingCards = getPendingCardIds()
         const res = await fetch('/api/auth/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: savedEmail, code }),
+          body: JSON.stringify({
+            email: savedEmail,
+            code,
+            mode: authMode,
+            pending_card_ids: pendingCards.length > 0 ? pendingCards : undefined,
+          }),
         })
         const data = await res.json()
 
         if (!res.ok) throw new Error(data.error || 'ログインに失敗しました')
 
+        // Clear pending cards after successful claim
+        if (data.claimed_cards && data.claimed_cards.length > 0) {
+          clearPendingCardIds()
+        }
+
         window.location.href = '/dashboard'
       } catch (err) {
-        alert(err.message)
-        btnLogin.innerHTML = 'ログイン <i class="fas fa-arrow-right text-sm"></i>'
+        showError(err.message, '')
+        const labelText = authMode === 'register' ? '登録する' : 'ログイン'
+        btnLogin.innerHTML = `<span id="btn-login-label">${labelText}</span> <i class="fas fa-arrow-right text-sm"></i>`
         btnLogin.disabled = false
       }
+    })
+  }
+
+  // --- Enter key support ---
+  if (emailInput) {
+    emailInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') btnSendCode?.click()
+    })
+  }
+  if (codeInput) {
+    codeInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') btnLogin?.click()
     })
   }
 }
@@ -1597,29 +1763,30 @@ function escapeHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
 }
 
-function formatDate(dateStr) {
-  if (!dateStr) return '-'
+/**
+ * Convert a UTC date string from DB to JST Date object
+ */
+function toJST(dateStr) {
+  if (!dateStr) return null
   try {
-    const d = new Date(dateStr)
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
-  } catch { return dateStr }
+    const utc = dateStr.endsWith('Z') ? dateStr : dateStr + 'Z'
+    return new Date(new Date(utc).getTime() + 9 * 60 * 60 * 1000)
+  } catch { return null }
+}
+
+function formatDate(dateStr) {
+  const d = toJST(dateStr)
+  if (!d) return '-'
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 }
 
 function formatDateTime(dateStr) {
-  if (!dateStr) return '-'
-  try {
-    const d = new Date(dateStr)
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
-  } catch { return dateStr }
+  const d = toJST(dateStr)
+  if (!d) return '-'
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
 }
 
+// Alias — all date functions now use JST
 function formatDateTimeJST(dateStr) {
-  if (!dateStr) return '-'
-  try {
-    // DB stores UTC, convert to JST (UTC+9)
-    const utc = dateStr.endsWith('Z') ? dateStr : dateStr + 'Z'
-    const d = new Date(utc)
-    const jst = new Date(d.getTime() + 9 * 60 * 60 * 1000)
-    return `${jst.getFullYear()}-${String(jst.getMonth()+1).padStart(2,'0')}-${String(jst.getDate()).padStart(2,'0')} ${String(jst.getHours()).padStart(2,'0')}:${String(jst.getMinutes()).padStart(2,'0')}`
-  } catch { return dateStr }
+  return formatDateTime(dateStr)
 }

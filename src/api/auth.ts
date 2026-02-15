@@ -9,17 +9,21 @@ const auth = new Hono<{ Bindings: Bindings }>()
 
 /**
  * Send OTP email via Resend API
- * Returns true if email was sent successfully, false otherwise
  */
 async function sendOTPEmail(
   email: string,
   code: string,
   apiKey: string | undefined,
-  fromEmail: string | undefined
+  fromEmail: string | undefined,
+  isRegistration: boolean = false
 ): Promise<boolean> {
   if (!apiKey) return false
 
   const from = fromEmail || 'RevQ <noreply@revq.jp>'
+  const subject = isRegistration
+    ? `[RevQ] 新規登録コード: ${code}`
+    : `[RevQ] ログインコード: ${code}`
+  const purpose = isRegistration ? '新規登録用ワンタイムコード' : 'ログイン用ワンタイムコード'
 
   try {
     const res = await fetch('https://api.resend.com/emails', {
@@ -31,7 +35,7 @@ async function sendOTPEmail(
       body: JSON.stringify({
         from,
         to: [email],
-        subject: `[RevQ] ログインコード: ${code}`,
+        subject,
         html: `
 <!DOCTYPE html>
 <html lang="ja">
@@ -42,7 +46,7 @@ async function sendOTPEmail(
       <h1 style="margin:0;color:#fff;font-size:20px;font-weight:700;">RevQ</h1>
     </div>
     <div style="padding:32px 24px;text-align:center;">
-      <p style="color:#475569;font-size:15px;margin:0 0 24px;">ログイン用ワンタイムコード</p>
+      <p style="color:#475569;font-size:15px;margin:0 0 24px;">${purpose}</p>
       <div style="background:#f1f5f9;border-radius:12px;padding:20px;margin:0 auto 24px;display:inline-block;">
         <p style="margin:0;font-size:36px;font-weight:800;letter-spacing:0.3em;color:#1e293b;font-family:monospace;">${code}</p>
       </div>
@@ -71,15 +75,13 @@ async function sendOTPEmail(
 }
 
 /**
- * POST /api/auth/send-code
- * Send OTP code to email
+ * Common: rate limit check + OTP generation + email send
  */
-auth.post('/send-code', async (c) => {
-  const { email } = await c.req.json<{ email: string }>()
-  if (!email || !email.includes('@')) {
-    return c.json({ error: 'メールアドレスが無効です' }, 400)
-  }
-
+async function generateAndSendOTP(
+  c: any,
+  email: string,
+  isRegistration: boolean
+): Promise<Response | { code: string }> {
   // Rate limiting: max 1 OTP per email per 60 seconds
   const recentOtp = await c.env.DB.prepare(
     "SELECT id FROM otps WHERE email = ? AND used = 0 AND created_at > datetime('now', '-60 seconds') LIMIT 1"
@@ -89,7 +91,7 @@ auth.post('/send-code', async (c) => {
   }
 
   const code = generateOTPCode()
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5 min
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString()
 
   // Invalidate previous codes
   await c.env.DB.prepare('UPDATE otps SET used = 1 WHERE email = ? AND used = 0')
@@ -100,14 +102,36 @@ auth.post('/send-code', async (c) => {
     .bind(email, code, expiresAt).run()
 
   // Send OTP via Resend
-  const emailSent = await sendOTPEmail(email, code, c.env.RESEND_API_KEY, c.env.OTP_FROM_EMAIL)
-  console.log(`[OTP] ${email} (email_sent: ${emailSent})`)
+  const emailSent = await sendOTPEmail(email, code, c.env.RESEND_API_KEY, c.env.OTP_FROM_EMAIL, isRegistration)
+  console.log(`[OTP] ${email} (registration: ${isRegistration}, email_sent: ${emailSent})`)
 
   if (!emailSent) {
     return c.json({
       error: 'メールの送信に失敗しました。しばらく時間をおいてから再度お試しください。'
     }, 500)
   }
+
+  return { code }
+}
+
+/**
+ * POST /api/auth/send-code
+ * Send OTP code to EXISTING user only (login flow)
+ */
+auth.post('/send-code', async (c) => {
+  const { email } = await c.req.json<{ email: string }>()
+  if (!email || !email.includes('@')) {
+    return c.json({ error: 'メールアドレスが無効です' }, 400)
+  }
+
+  // Check if user exists
+  const user = await c.env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first()
+  if (!user) {
+    return c.json({ error: 'このメールアドレスは登録されていません。新規登録をお願いします。', code: 'NOT_REGISTERED' }, 404)
+  }
+
+  const result = await generateAndSendOTP(c, email, false)
+  if (result instanceof Response) return result
 
   return c.json({
     success: true,
@@ -117,18 +141,52 @@ auth.post('/send-code', async (c) => {
 })
 
 /**
+ * POST /api/auth/register
+ * Send OTP code for NEW user registration
+ * Accepts optional pending_card_ids to claim after verification
+ */
+auth.post('/register', async (c) => {
+  const { email } = await c.req.json<{ email: string }>()
+  if (!email || !email.includes('@')) {
+    return c.json({ error: 'メールアドレスが無効です' }, 400)
+  }
+
+  // Check if user already exists
+  const existingUser = await c.env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first()
+  if (existingUser) {
+    return c.json({ error: 'このメールアドレスは既に登録されています。ログインしてください。', code: 'ALREADY_REGISTERED' }, 409)
+  }
+
+  const result = await generateAndSendOTP(c, email, true)
+  if (result instanceof Response) return result
+
+  return c.json({
+    success: true,
+    message: '登録用ワンタイムコードをメールで送信しました',
+    email_sent: true,
+  })
+})
+
+/**
  * POST /api/auth/verify
  * Verify OTP code and return JWT
+ * For login: user must already exist
+ * For registration (mode=register): creates user + claims pending cards
  */
 auth.post('/verify', async (c) => {
-  const { email, code } = await c.req.json<{ email: string; code: string }>()
+  const { email, code, mode, pending_card_ids } = await c.req.json<{
+    email: string
+    code: string
+    mode?: 'login' | 'register'
+    pending_card_ids?: number[]
+  }>()
   if (!email || !code) {
     return c.json({ error: 'メールとコードを入力してください' }, 400)
   }
 
   // Find valid OTP
   const otp = await c.env.DB.prepare(
-    'SELECT * FROM otps WHERE email = ? AND code = ? AND used = 0 AND expires_at > datetime(\'now\') ORDER BY id DESC LIMIT 1'
+    "SELECT * FROM otps WHERE email = ? AND code = ? AND used = 0 AND expires_at > datetime('now') ORDER BY id DESC LIMIT 1"
   ).bind(email, code).first()
 
   if (!otp) {
@@ -138,16 +196,69 @@ auth.post('/verify', async (c) => {
   // Mark OTP as used
   await c.env.DB.prepare('UPDATE otps SET used = 1 WHERE id = ?').bind(otp.id).run()
 
-  // Upsert user
   let user = await c.env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(email).first()
-  if (!user) {
-    await c.env.DB.prepare('INSERT INTO users (email) VALUES (?)').bind(email).run()
-    user = await c.env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(email).first()
+  let isNewUser = false
+
+  if (mode === 'register') {
+    // Registration flow — create user if not exists
+    if (!user) {
+      await c.env.DB.prepare('INSERT INTO users (email) VALUES (?)').bind(email).run()
+      user = await c.env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(email).first()
+      isNewUser = true
+    }
+  } else {
+    // Login flow — user must already exist
+    if (!user) {
+      return c.json({ error: 'このメールアドレスは登録されていません' }, 404)
+    }
   }
 
   // Update last login
-  await c.env.DB.prepare('UPDATE users SET last_login_at = datetime(\'now\') WHERE id = ?')
+  await c.env.DB.prepare("UPDATE users SET last_login_at = datetime('now') WHERE id = ?")
     .bind(user!.id).run()
+
+  // Claim pending cards (created before login/registration)
+  const claimedCards: number[] = []
+  if (pending_card_ids && pending_card_ids.length > 0) {
+    for (const cardId of pending_card_ids) {
+      // Only claim cards that have no owner yet
+      const card = await c.env.DB.prepare(
+        'SELECT id, google_url, store_name FROM cards WHERE id = ? AND user_id IS NULL'
+      ).bind(cardId).first()
+      if (card) {
+        // Find or create a store for this card
+        let store = await c.env.DB.prepare(
+          'SELECT id FROM stores WHERE user_id = ? AND google_url = ?'
+        ).bind(user!.id, card.google_url).first()
+
+        if (!store) {
+          // Check store limit
+          const storeCount = await c.env.DB.prepare(
+            'SELECT COUNT(*) as count FROM stores WHERE user_id = ?'
+          ).bind(user!.id).first()
+          const maxStores = (user!.max_stores as number) || 3
+          const currentStoreCount = (storeCount?.count as number) || 0
+
+          if (currentStoreCount < maxStores) {
+            const storeName = (card.store_name as string) || '(店名なし)'
+            await c.env.DB.prepare(
+              'INSERT INTO stores (user_id, name, google_url) VALUES (?, ?, ?)'
+            ).bind(user!.id, storeName, card.google_url).run()
+            store = await c.env.DB.prepare(
+              'SELECT id FROM stores WHERE user_id = ? AND google_url = ?'
+            ).bind(user!.id, card.google_url).first()
+          }
+        }
+
+        // Assign card to user + store
+        await c.env.DB.prepare(
+          'UPDATE cards SET user_id = ?, store_id = ? WHERE id = ?'
+        ).bind(user!.id, store?.id || null, cardId).run()
+
+        claimedCards.push(cardId)
+      }
+    }
+  }
 
   // Create JWT
   const secret = c.env.JWT_SECRET || JWT_SECRET_DEFAULT
@@ -164,6 +275,8 @@ auth.post('/verify', async (c) => {
 
   return c.json({
     success: true,
+    is_new_user: isNewUser,
+    claimed_cards: claimedCards,
     user: { id: user!.id, email: user!.email, name: user!.name, plan: user!.plan },
   })
 })
@@ -192,7 +305,6 @@ auth.get('/me', async (c) => {
 
 /**
  * GET /api/auth/preferences
- * Get user preferences (weekly email opt-in, etc.)
  */
 auth.get('/preferences', async (c) => {
   const token = getCookie(c, 'token')
@@ -211,7 +323,6 @@ auth.get('/preferences', async (c) => {
 
 /**
  * PUT /api/auth/preferences
- * Update user preferences
  */
 auth.put('/preferences', async (c) => {
   const token = getCookie(c, 'token')

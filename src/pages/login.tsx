@@ -3,12 +3,30 @@ export const LoginPage = () => {
     <div class="max-w-md mx-auto px-4 sm:px-6 py-12 md:py-20">
       <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
         {/* Header */}
-        <div class="text-center mb-8">
+        <div class="text-center mb-6">
           <div class="w-14 h-14 bg-brand-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <i class="fas fa-user text-brand-600 text-xl"></i>
           </div>
-          <h1 class="text-xl font-bold text-gray-900">ログイン</h1>
-          <p class="text-sm text-gray-500 mt-1">メールアドレスにワンタイムコードを送信します</p>
+          <h1 class="text-xl font-bold text-gray-900" id="auth-title">ログイン</h1>
+          <p class="text-sm text-gray-500 mt-1" id="auth-subtitle">メールアドレスにワンタイムコードを送信します</p>
+        </div>
+
+        {/* Login/Register Tab */}
+        <div class="flex bg-gray-100 rounded-xl p-1 mb-6" id="auth-tabs">
+          <button
+            type="button"
+            id="tab-login"
+            class="flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all bg-white text-gray-900 shadow-sm"
+          >
+            ログイン
+          </button>
+          <button
+            type="button"
+            id="tab-register"
+            class="flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all text-gray-500 hover:text-gray-700"
+          >
+            新規登録
+          </button>
         </div>
 
         {/* Email Step */}
@@ -35,7 +53,8 @@ export const LoginPage = () => {
               ワンタイムコードを送信
             </button>
 
-            <p class="text-xs text-gray-400 text-center">
+            {/* Info text - changes with tab */}
+            <p class="text-xs text-gray-400 text-center" id="auth-info-text">
               <i class="fas fa-shield-alt mr-1"></i>
               パスワード不要。毎回メールで届くコードでログインします。
             </p>
@@ -71,8 +90,8 @@ export const LoginPage = () => {
                   <i class="fas fa-exclamation-triangle text-red-600 text-sm"></i>
                 </div>
                 <div>
-                  <p class="text-sm font-semibold text-red-800">メールの送信に失敗しました</p>
-                  <p class="text-xs text-red-600 mt-1">しばらく時間をおいてから再度お試しください</p>
+                  <p class="text-sm font-semibold text-red-800" id="otp-error-message">メールの送信に失敗しました</p>
+                  <p class="text-xs text-red-600 mt-1" id="otp-error-detail">しばらく時間をおいてから再度お試しください</p>
                 </div>
               </div>
             </div>
@@ -96,7 +115,7 @@ export const LoginPage = () => {
               id="btn-login"
               class="w-full bg-brand-600 text-white py-3.5 rounded-xl text-base font-bold hover:bg-brand-700 transition-all shadow-sm flex items-center justify-center gap-2"
             >
-              ログイン
+              <span id="btn-login-label">ログイン</span>
               <i class="fas fa-arrow-right text-sm"></i>
             </button>
 
