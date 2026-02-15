@@ -6,6 +6,8 @@ export type Bindings = {
   ADMIN_PASSWORD?: string
   RESEND_API_KEY?: string
   OTP_FROM_EMAIL?: string
+  LINK_DOMAIN?: string   // Short URL domain (default: revq.link)
+  MAIN_DOMAIN?: string   // Main site domain (default: revq.jp)
 }
 
 // DB row types

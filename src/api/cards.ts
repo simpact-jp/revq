@@ -10,6 +10,15 @@ const JWT_SECRET_DEFAULT = 'revq-dev-secret-change-in-production'
 const cards = new Hono<{ Bindings: Bindings }>()
 
 /**
+ * Helper: build the short URL using the dedicated link domain
+ * Always returns https://revq.link/{code} format
+ */
+function buildShortUrl(c: any, shortCode: string): string {
+  const linkDomain = c.env.LINK_DOMAIN || 'revq.link'
+  return `https://${linkDomain}/${shortCode}`
+}
+
+/**
  * Helper: get current user ID from JWT (optional — null if not logged in)
  */
 async function getUserId(c: any): Promise<number | null> {
@@ -67,8 +76,6 @@ cards.post('/', async (c) => {
   const card = await c.env.DB.prepare('SELECT * FROM cards WHERE short_code = ?')
     .bind(shortCode).first()
 
-  const origin = new URL(c.req.url).origin
-
   return c.json({
     success: true,
     card: {
@@ -78,7 +85,7 @@ cards.post('/', async (c) => {
       template: card!.template,
       cta_text: card!.cta_text,
       label: card!.label,
-      short_url: `${origin}/r/${shortCode}`,
+      short_url: buildShortUrl(c, shortCode),
       created_at: card!.created_at,
     },
   })
@@ -103,8 +110,6 @@ cards.get('/', async (c) => {
     GROUP BY c.id
     ORDER BY c.created_at DESC
   `).bind(userId).all()
-
-  const origin = new URL(c.req.url).origin
 
   // Fetch feedback counts for each card
   const cardIds = (results || []).map((card: any) => card.id)
@@ -146,7 +151,7 @@ cards.get('/', async (c) => {
 
   const cardsWithUrls = (results || []).map((card: any) => ({
     ...card,
-    short_url: `${origin}/r/${card.short_code}`,
+    short_url: buildShortUrl(c, card.short_code),
     recent_clicks: recentClicksMap[card.id] || [],
     feedback_count: feedbackCountMap[card.id] || 0,
     unread_feedback: unreadFeedbackMap[card.id] || 0,
@@ -226,13 +231,12 @@ cards.put('/:id', async (c) => {
   }
 
   const updated = await c.env.DB.prepare('SELECT * FROM cards WHERE id = ?').bind(id).first()
-  const origin = new URL(c.req.url).origin
 
   return c.json({
     success: true,
     card: {
       ...updated,
-      short_url: `${origin}/r/${updated!.short_code}`,
+      short_url: buildShortUrl(c, updated!.short_code as string),
     },
   })
 })
@@ -253,11 +257,10 @@ cards.get('/:id', async (c) => {
 
   if (!card) return c.json({ error: 'カードが見つかりません' }, 404)
 
-  const origin = new URL(c.req.url).origin
   return c.json({
     card: {
       ...card,
-      short_url: `${origin}/r/${card.short_code}`,
+      short_url: buildShortUrl(c, card.short_code as string),
     }
   })
 })
@@ -271,7 +274,7 @@ cards.get('/:id/qr', async (c) => {
   const card = await c.env.DB.prepare('SELECT * FROM cards WHERE id = ?').bind(id).first()
   if (!card) return c.json({ error: 'カードが見つかりません' }, 404)
 
-  const shortUrl = `${new URL(c.req.url).origin}/r/${card.short_code}`
+  const shortUrl = buildShortUrl(c, card.short_code as string)
   const svg = generateQRSvg(shortUrl)
 
   return new Response(svg, {
@@ -288,7 +291,7 @@ cards.get('/:id/pdf', async (c) => {
   const card = await c.env.DB.prepare('SELECT * FROM cards WHERE id = ?').bind(id).first()
   if (!card) return c.json({ error: 'カードが見つかりません' }, 404)
 
-  const shortUrl = `${new URL(c.req.url).origin}/r/${card.short_code}`
+  const shortUrl = buildShortUrl(c, card.short_code as string)
 
   // Get layout options from query params
   const layout = (c.req.query('layout') || 'card') as PDFLayout

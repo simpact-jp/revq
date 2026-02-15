@@ -84,10 +84,10 @@ admin.get('/cards', async (c) => {
     ORDER BY c.created_at DESC
   `).all()
 
-  const origin = new URL(c.req.url).origin
+  const linkDomain = c.env.LINK_DOMAIN || 'revq.link'
   const cardsWithUrls = (results || []).map((card: any) => ({
     ...card,
-    short_url: `${origin}/r/${card.short_code}`,
+    short_url: `https://${linkDomain}/${card.short_code}`,
   }))
 
   return c.json({ cards: cardsWithUrls })

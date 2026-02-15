@@ -18,6 +18,32 @@ import type { Bindings } from './lib/types'
 
 const app = new Hono<{ Bindings: Bindings }>()
 
+/**
+ * Helper: check if the request is to the short-link domain (revq.link)
+ */
+function isLinkDomain(c: any): boolean {
+  const host = c.req.header('host') || ''
+  const linkDomain = c.env.LINK_DOMAIN || 'revq.link'
+  // Match exact domain or www. prefix
+  return host === linkDomain || host === `www.${linkDomain}`
+}
+
+/**
+ * Helper: get the short URL base (always https://revq.link)
+ */
+function getShortUrlBase(c: any): string {
+  const linkDomain = c.env.LINK_DOMAIN || 'revq.link'
+  return `https://${linkDomain}`
+}
+
+/**
+ * Helper: get the main site URL (always https://revq.jp)
+ */
+function getMainSiteUrl(c: any): string {
+  const mainDomain = c.env.MAIN_DOMAIN || 'revq.jp'
+  return `https://${mainDomain}`
+}
+
 // CORS for API routes
 app.use('/api/*', cors())
 
@@ -52,11 +78,15 @@ app.post('/api/admin/trigger-weekly-report', async (c) => {
   return c.json({ success: true, ...result })
 })
 
-// Short URL redirect + click tracking + satisfaction gate
-app.get('/r/:code', async (c) => {
-  const code = c.req.param('code')
+/**
+ * Shared handler for short URL redirect + click tracking + satisfaction gate
+ * Used by both /r/:code (legacy) and /:code (revq.link direct)
+ */
+async function handleShortUrl(c: any, code: string) {
   const card = await c.env.DB.prepare('SELECT * FROM cards WHERE short_code = ? AND status = ?')
     .bind(code, 'active').first()
+
+  const mainSiteUrl = getMainSiteUrl(c)
 
   if (!card) {
     return c.html(`
@@ -67,7 +97,7 @@ app.get('/r/:code', async (c) => {
           <p class="text-6xl mb-4">😕</p>
           <h1 class="text-2xl font-bold text-gray-800 mb-2">リンクが見つかりません</h1>
           <p class="text-gray-500 mb-6">このリンクは無効または削除されています</p>
-          <a href="/" class="text-brand-600 hover:underline">RevQ トップページへ</a>
+          <a href="${mainSiteUrl}" class="text-blue-600 hover:underline">RevQ トップページへ</a>
         </div>
       </body></html>
     `, 404)
@@ -86,11 +116,16 @@ app.get('/r/:code', async (c) => {
     const storeName = (card.store_name as string) || ''
     const googleUrl = card.google_url as string
     const cardId = card.id as number
-    return c.html(renderGatePage(storeName, googleUrl, cardId))
+    return c.html(renderGatePage(storeName, googleUrl, cardId, mainSiteUrl))
   }
 
   // Otherwise, redirect directly to Google Maps URL
   return c.redirect(card.google_url as string, 302)
+}
+
+// Short URL redirect (legacy path — works on both domains)
+app.get('/r/:code', async (c) => {
+  return handleShortUrl(c, c.req.param('code'))
 })
 
 /**
@@ -98,7 +133,7 @@ app.get('/r/:code', async (c) => {
  * - "満足" → redirect to Google review
  * - "不満" → show feedback form
  */
-function renderGatePage(storeName: string, googleUrl: string, cardId: number): string {
+function renderGatePage(storeName: string, googleUrl: string, cardId: number, mainSiteUrl: string = 'https://revq.jp'): string {
   const displayName = storeName ? `「${escHtml(storeName)}」` : '当店'
   return `<!DOCTYPE html>
 <html lang="ja">
@@ -250,37 +285,64 @@ function escHtml(s: string): string {
 app.use(renderer)
 
 // Landing / Creation Flow
+// On revq.link: root redirects to main site
+// On revq.jp (or others): show the landing page
 app.get('/', (c) => {
+  if (isLinkDomain(c)) {
+    return c.redirect(getMainSiteUrl(c), 302)
+  }
   return c.render(<HomePage />, { title: 'RevQ — Googleレビュー依頼カードを無料作成' })
 })
 
 // Completion / Download — serves as template, JS fills from query params
 app.get('/done', (c) => {
+  if (isLinkDomain(c)) return c.redirect(`${getMainSiteUrl(c)}/done?${c.req.url.split('?')[1] || ''}`, 302)
   return c.render(<DonePage />, { title: '作成完了 — RevQ' })
 })
 
 // Login
 app.get('/login', (c) => {
+  if (isLinkDomain(c)) return c.redirect(`${getMainSiteUrl(c)}/login`, 302)
   return c.render(<LoginPage />, { title: 'ログイン — RevQ' })
 })
 
 // Dashboard (User)
 app.get('/dashboard', (c) => {
+  if (isLinkDomain(c)) return c.redirect(`${getMainSiteUrl(c)}/dashboard`, 302)
   return c.render(<DashboardPage />, { title: 'マイページ — RevQ' })
 })
 
 // Legal pages
 app.get('/privacy', (c) => {
+  if (isLinkDomain(c)) return c.redirect(`${getMainSiteUrl(c)}/privacy`, 302)
   return c.render(<PrivacyPage />, { title: 'プライバシーポリシー — RevQ' })
 })
 
 app.get('/terms', (c) => {
+  if (isLinkDomain(c)) return c.redirect(`${getMainSiteUrl(c)}/terms`, 302)
   return c.render(<TermsPage />, { title: '利用規約 — RevQ' })
 })
 
 // Admin (Operator) — protected by Basic Auth (middleware defined above)
 app.get('/admin', (c) => {
+  if (isLinkDomain(c)) return c.redirect(`${getMainSiteUrl(c)}/admin`, 302)
   return c.render(<AdminPage />, { title: '運営管理 — RevQ' })
+})
+
+// ============ revq.link: /:code direct short URL (must be LAST) ============
+// This catch-all matches any path on revq.link that wasn't handled above
+// e.g. revq.link/abc123 → short URL handler
+app.get('/:code', async (c) => {
+  // Only activate on the link domain to avoid catching all routes on main site
+  if (!isLinkDomain(c)) {
+    return c.notFound()
+  }
+  const code = c.req.param('code')
+  // Skip paths that look like file requests
+  if (code.includes('.')) {
+    return c.notFound()
+  }
+  return handleShortUrl(c, code)
 })
 
 // Cloudflare Workers Cron Trigger handler
