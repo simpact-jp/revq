@@ -10,8 +10,8 @@ export const TokushohoPage = () => {
         </div>
         <div class="px-6 py-5 sm:grid sm:grid-cols-3 sm:gap-4">
           <dt class="text-sm font-semibold text-gray-500">運営責任者</dt>
-          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-            請求があった場合、遅滞なく開示いたします
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2" style="user-select:none;-webkit-user-select:none;">
+            <img src="/api/tokushoho/name" alt="" width="120" height="20" draggable="false" style="pointer-events:none;" />
           </dd>
         </div>
         <div class="px-6 py-5 sm:grid sm:grid-cols-3 sm:gap-4">
@@ -22,8 +22,8 @@ export const TokushohoPage = () => {
         </div>
         <div class="px-6 py-5 sm:grid sm:grid-cols-3 sm:gap-4">
           <dt class="text-sm font-semibold text-gray-500">電話番号</dt>
-          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-            請求があった場合、遅滞なく開示いたします
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2" style="user-select:none;-webkit-user-select:none;">
+            <img src="/api/tokushoho/phone" alt="" width="135" height="20" draggable="false" style="pointer-events:none;" />
           </dd>
         </div>
         <div class="px-6 py-5 sm:grid sm:grid-cols-3 sm:gap-4">

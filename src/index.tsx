@@ -291,6 +291,44 @@ function escHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
+// ============ Tokushoho SVG image API (anti-crawl) ============
+// Personal info is stored as UTF-8 byte arrays (not plain text) and decoded at runtime
+// so crawlers/scrapers cannot extract it from HTML source or built JS
+app.get('/api/tokushoho/:field', (c) => {
+  const field = c.req.param('field')
+
+  // UTF-8 byte arrays — decoded only at request time
+  // These are the UTF-8 byte sequences for the personal info strings
+  const entries: Record<string, { bytes: number[]; width: number }> = {
+    // "深草　智裕" in UTF-8 bytes
+    name: {
+      bytes: [0xE6,0xB7,0xB1,0xE8,0x8D,0x89,0xE3,0x80,0x80,0xE6,0x99,0xBA,0xE8,0xA3,0x95],
+      width: 120,
+    },
+    // "090-2398-6588" in UTF-8 bytes
+    phone: {
+      bytes: [0x30,0x39,0x30,0x2D,0x32,0x33,0x39,0x38,0x2D,0x36,0x35,0x38,0x38],
+      width: 135,
+    },
+  }
+  const info = entries[field]
+  if (!info) return c.notFound()
+
+  // Decode UTF-8 bytes to string at runtime
+  const text = new TextDecoder().decode(new Uint8Array(info.bytes))
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${info.width}" height="20" viewBox="0 0 ${info.width} 20"><text x="0" y="15" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="14" fill="#111827">${text}</text></svg>`
+
+  return new Response(svg, {
+    headers: {
+      'Content-Type': 'image/svg+xml; charset=utf-8',
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+      'X-Robots-Tag': 'noindex, nofollow',
+      'X-Content-Type-Options': 'nosniff',
+    },
+  })
+})
+
 // ============ Page routes ============
 app.use(renderer)
 
