@@ -105,9 +105,33 @@ cards.get('/', async (c) => {
   `).bind(userId).all()
 
   const origin = new URL(c.req.url).origin
+
+  // Fetch recent clicks (latest 3) for each card
+  const cardIds = (results || []).map((card: any) => card.id)
+  let recentClicksMap: Record<number, string[]> = {}
+  if (cardIds.length > 0) {
+    const placeholders = cardIds.map(() => '?').join(',')
+    const { results: recentClicks } = await c.env.DB.prepare(`
+      SELECT card_id, clicked_at FROM (
+        SELECT card_id, clicked_at,
+               ROW_NUMBER() OVER (PARTITION BY card_id ORDER BY clicked_at DESC) as rn
+        FROM clicks
+        WHERE card_id IN (${placeholders})
+      ) WHERE rn <= 3
+      ORDER BY card_id, clicked_at DESC
+    `).bind(...cardIds).all()
+
+    for (const click of (recentClicks || [])) {
+      const cid = click.card_id as number
+      if (!recentClicksMap[cid]) recentClicksMap[cid] = []
+      recentClicksMap[cid].push(click.clicked_at as string)
+    }
+  }
+
   const cardsWithUrls = (results || []).map((card: any) => ({
     ...card,
     short_url: `${origin}/r/${card.short_code}`,
+    recent_clicks: recentClicksMap[card.id] || [],
   }))
 
   // Return user's card limit info

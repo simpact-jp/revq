@@ -661,6 +661,25 @@ async function initDashboardPage() {
                 <i class="fas fa-copy"></i>
               </button>
             </div>
+            ${card.recent_clicks && card.recent_clicks.length > 0 ? `
+            <div class="mb-4 bg-blue-50/50 border border-blue-100 rounded-lg p-3">
+              <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                <i class="fas fa-clock mr-1"></i>直近の読み込み
+              </p>
+              <div class="space-y-1">
+                ${card.recent_clicks.map((dt, i) => `
+                  <div class="flex items-center gap-2 text-xs">
+                    <span class="w-4 h-4 rounded-full ${i === 0 ? 'bg-brand-100 text-brand-600' : 'bg-gray-100 text-gray-400'} flex items-center justify-center text-[10px] font-bold flex-shrink-0">${i + 1}</span>
+                    <span class="font-mono ${i === 0 ? 'text-gray-800 font-semibold' : 'text-gray-500'}">${formatDateTimeJST(dt)}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+            ` : `
+            <div class="mb-4 bg-gray-50 border border-gray-100 rounded-lg p-3">
+              <p class="text-xs text-gray-400 text-center"><i class="fas fa-clock mr-1"></i>まだ読み込みがありません</p>
+            </div>
+            `}
             <div class="flex items-center gap-4">
               <div class="flex-shrink-0 bg-white border border-gray-200 rounded-lg p-2 qr-mini" data-card-id="${card.id}">
                 <div class="w-14 h-14 flex items-center justify-center text-gray-300">
@@ -1269,5 +1288,16 @@ function formatDateTime(dateStr) {
   try {
     const d = new Date(dateStr)
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+  } catch { return dateStr }
+}
+
+function formatDateTimeJST(dateStr) {
+  if (!dateStr) return '-'
+  try {
+    // DB stores UTC, convert to JST (UTC+9)
+    const utc = dateStr.endsWith('Z') ? dateStr : dateStr + 'Z'
+    const d = new Date(utc)
+    const jst = new Date(d.getTime() + 9 * 60 * 60 * 1000)
+    return `${jst.getFullYear()}-${String(jst.getMonth()+1).padStart(2,'0')}-${String(jst.getDate()).padStart(2,'0')} ${String(jst.getHours()).padStart(2,'0')}:${String(jst.getMinutes()).padStart(2,'0')}`
   } catch { return dateStr }
 }
