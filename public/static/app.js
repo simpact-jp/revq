@@ -605,8 +605,9 @@ async function initDashboardPage() {
     if (!res.ok) throw new Error(data.error)
 
     const cards = data.cards || []
-
-    const maxCards = data.max_cards || 2
+    const stores = data.stores || []
+    const maxStores = data.max_stores || 3
+    const maxCardsPerStore = data.max_cards_per_store || 2
 
     // Update stats
     if (statsContainer) {
@@ -616,8 +617,12 @@ async function initDashboardPage() {
       const unreadFeedbacks = cards.reduce((sum, c) => sum + (c.unread_feedback || 0), 0)
       statsContainer.innerHTML = `
         <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
-          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">カード数</p>
-          <p class="text-2xl sm:text-3xl font-bold text-gray-900">${totalCards} <span class="text-sm font-normal text-gray-400">/ ${maxCards}</span></p>
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">登録店舗</p>
+          <p class="text-2xl sm:text-3xl font-bold text-gray-900">${stores.length} <span class="text-sm font-normal text-gray-400">/ ${maxStores}</span></p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">QRカード</p>
+          <p class="text-2xl sm:text-3xl font-bold text-gray-900">${totalCards} <span class="text-sm font-normal text-gray-400">(各店舗${maxCardsPerStore}枚まで)</span></p>
         </div>
         <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
           <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">総クリック数</p>
@@ -630,12 +635,19 @@ async function initDashboardPage() {
       `
     }
 
-    // Show/hide "create new" button based on card limit
-    const createNewBtn = document.querySelector('a[href=\"/#create\"]')
-    if (createNewBtn && cards.length >= maxCards) {
-      createNewBtn.classList.add('opacity-50', 'pointer-events-none')
-      createNewBtn.title = `\u30ab\u30fc\u30c9\u4e0a\u9650\uff08${maxCards}\u679a\uff09\u306b\u9054\u3057\u3066\u3044\u307e\u3059`
-      createNewBtn.insertAdjacentHTML('afterend', `<span class="text-xs text-gray-400 ml-2">\u4e0a\u9650${maxCards}\u679a</span>`)
+    // Show/hide "create new" button based on store limit
+    const createNewBtn = document.querySelector('a[href="/#create"]')
+    if (createNewBtn && stores.length >= maxStores) {
+      // Check if ALL stores are also at card limit
+      const allStoresFull = stores.every(s => {
+        const storeCards = cards.filter(c => c.store_id === s.id)
+        return storeCards.length >= maxCardsPerStore
+      })
+      if (allStoresFull) {
+        createNewBtn.classList.add('opacity-50', 'pointer-events-none')
+        createNewBtn.title = `店舗上限（${maxStores}件）およびQR上限に達しています`
+        createNewBtn.insertAdjacentHTML('afterend', `<span class="text-xs text-gray-400 ml-2">上限到達</span>`)
+      }
     }
 
     if (cards.length === 0) {

@@ -32,6 +32,12 @@ async function getUserId(c: any): Promise<number | null> {
 /**
  * POST /api/cards
  * Create a new review card
+ *
+ * Flow:
+ *   1. If logged in, find or create a store for the given google_url
+ *   2. Check store limit (max_stores per user, default 3)
+ *   3. Check card limit (max_cards_per_store, default 2)
+ *   4. Create the card linked to the store
  */
 cards.post('/', async (c) => {
   const body = await c.req.json<CreateCardRequest>()
@@ -40,15 +46,58 @@ cards.post('/', async (c) => {
     return c.json({ error: 'GoogleマップのURLは必須です' }, 400)
   }
 
-  // Check card limit for logged-in users
   const userId = await getUserId(c)
+  let storeId: number | null = null
+
   if (userId) {
-    const user = await c.env.DB.prepare('SELECT max_cards FROM users WHERE id = ?').bind(userId).first()
-    const maxCards = (user?.max_cards as number) || 2
-    const existing = await c.env.DB.prepare('SELECT COUNT(*) as count FROM cards WHERE user_id = ?').bind(userId).first()
-    const currentCount = (existing?.count as number) || 0
-    if (currentCount >= maxCards) {
-      return c.json({ error: `カードの作成上限（${maxCards}枚）に達しています。既存のカードを削除してからお試しください。` }, 400)
+    // Get user limits
+    const user = await c.env.DB.prepare(
+      'SELECT max_stores, max_cards_per_store, max_cards FROM users WHERE id = ?'
+    ).bind(userId).first()
+    const maxStores = (user?.max_stores as number) || 3
+    const maxCardsPerStore = (user?.max_cards_per_store as number) || 2
+
+    // Try to find existing store for this google_url
+    let store = await c.env.DB.prepare(
+      'SELECT id FROM stores WHERE user_id = ? AND google_url = ?'
+    ).bind(userId, body.google_url).first()
+
+    if (!store) {
+      // New store — check store limit
+      const storeCount = await c.env.DB.prepare(
+        'SELECT COUNT(*) as count FROM stores WHERE user_id = ?'
+      ).bind(userId).first()
+      const currentStoreCount = (storeCount?.count as number) || 0
+
+      if (currentStoreCount >= maxStores) {
+        return c.json({
+          error: `店舗の登録上限（${maxStores}件）に達しています。既存の店舗を削除してからお試しください。`
+        }, 400)
+      }
+
+      // Create new store
+      const storeName = body.store_name || '(店名なし)'
+      await c.env.DB.prepare(
+        'INSERT INTO stores (user_id, name, google_url) VALUES (?, ?, ?)'
+      ).bind(userId, storeName, body.google_url).run()
+
+      store = await c.env.DB.prepare(
+        'SELECT id FROM stores WHERE user_id = ? AND google_url = ?'
+      ).bind(userId, body.google_url).first()
+    }
+
+    storeId = store!.id as number
+
+    // Check card limit for this store
+    const cardCount = await c.env.DB.prepare(
+      'SELECT COUNT(*) as count FROM cards WHERE store_id = ?'
+    ).bind(storeId).first()
+    const currentCardCount = (cardCount?.count as number) || 0
+
+    if (currentCardCount >= maxCardsPerStore) {
+      return c.json({
+        error: `この店舗のQRコード発行上限（${maxCardsPerStore}枚）に達しています。既存のカードを削除してからお試しください。`
+      }, 400)
     }
   }
 
@@ -70,8 +119,8 @@ cards.post('/', async (c) => {
   const label = body.label || null
 
   await c.env.DB.prepare(
-    'INSERT INTO cards (user_id, store_name, google_url, short_code, template, image_key, cta_text, label) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-  ).bind(userId, storeName, body.google_url, shortCode, template, imageData, ctaText, label).run()
+    'INSERT INTO cards (user_id, store_id, store_name, google_url, short_code, template, image_key, cta_text, label) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  ).bind(userId, storeId, storeName, body.google_url, shortCode, template, imageData, ctaText, label).run()
 
   const card = await c.env.DB.prepare('SELECT * FROM cards WHERE short_code = ?')
     .bind(shortCode).first()
@@ -85,6 +134,7 @@ cards.post('/', async (c) => {
       template: card!.template,
       cta_text: card!.cta_text,
       label: card!.label,
+      store_id: card!.store_id,
       short_url: buildShortUrl(c, shortCode),
       created_at: card!.created_at,
     },
@@ -93,7 +143,7 @@ cards.post('/', async (c) => {
 
 /**
  * GET /api/cards
- * List cards for current user
+ * List cards for current user, grouped by store
  */
 cards.get('/', async (c) => {
   const userId = await getUserId(c)
@@ -101,8 +151,21 @@ cards.get('/', async (c) => {
     return c.json({ error: 'ログインが必要です' }, 401)
   }
 
+  // Get user limits
+  const user = await c.env.DB.prepare(
+    'SELECT max_stores, max_cards_per_store, max_cards FROM users WHERE id = ?'
+  ).bind(userId).first()
+  const maxStores = (user?.max_stores as number) || 3
+  const maxCardsPerStore = (user?.max_cards_per_store as number) || 2
+
+  // Get all stores for this user
+  const { results: stores } = await c.env.DB.prepare(
+    'SELECT * FROM stores WHERE user_id = ? ORDER BY created_at ASC'
+  ).bind(userId).all()
+
+  // Get all cards for this user
   const { results } = await c.env.DB.prepare(`
-    SELECT c.id, c.store_name, c.google_url, c.short_code, c.template, c.cta_text, c.label, c.gate_enabled, c.created_at, c.status,
+    SELECT c.id, c.store_id, c.store_name, c.google_url, c.short_code, c.template, c.cta_text, c.label, c.gate_enabled, c.created_at, c.status,
            COUNT(cl.id) as click_count
     FROM cards c
     LEFT JOIN clicks cl ON cl.card_id = c.id
@@ -157,11 +220,14 @@ cards.get('/', async (c) => {
     unread_feedback: unreadFeedbackMap[card.id] || 0,
   }))
 
-  // Return user's card limit info
-  const user = await c.env.DB.prepare('SELECT max_cards FROM users WHERE id = ?').bind(userId).first()
-  const maxCards = (user?.max_cards as number) || 2
-
-  return c.json({ cards: cardsWithUrls, max_cards: maxCards })
+  return c.json({
+    cards: cardsWithUrls,
+    stores: stores || [],
+    max_stores: maxStores,
+    max_cards_per_store: maxCardsPerStore,
+    // Keep backward compat
+    max_cards: maxCardsPerStore,
+  })
 })
 
 /**
@@ -206,6 +272,11 @@ cards.put('/:id', async (c) => {
   if (body.store_name !== undefined) {
     updates.push('store_name = ?')
     values.push(body.store_name || null)
+    // Also update store name if this card has a store
+    if (card.store_id && body.store_name) {
+      await c.env.DB.prepare('UPDATE stores SET name = ? WHERE id = ?')
+        .bind(body.store_name, card.store_id).run()
+    }
   }
   if (body.cta_text !== undefined) {
     updates.push('cta_text = ?')
@@ -368,6 +439,7 @@ cards.put('/:id/feedbacks/read', async (c) => {
 
 /**
  * DELETE /api/cards/:id
+ * Delete a card. If it's the last card in a store, also delete the store.
  */
 cards.delete('/:id', async (c) => {
   const userId = await getUserId(c)
@@ -378,9 +450,50 @@ cards.delete('/:id', async (c) => {
     .bind(id, userId).first()
   if (!card) return c.json({ error: 'カードが見つかりません' }, 404)
 
+  const storeId = card.store_id as number | null
+
   await c.env.DB.prepare('DELETE FROM feedbacks WHERE card_id = ?').bind(id).run()
   await c.env.DB.prepare('DELETE FROM clicks WHERE card_id = ?').bind(id).run()
   await c.env.DB.prepare('DELETE FROM cards WHERE id = ?').bind(id).run()
+
+  // If this was the last card in the store, also delete the store
+  if (storeId) {
+    const remaining = await c.env.DB.prepare(
+      'SELECT COUNT(*) as count FROM cards WHERE store_id = ?'
+    ).bind(storeId).first()
+    if ((remaining?.count as number) === 0) {
+      await c.env.DB.prepare('DELETE FROM stores WHERE id = ?').bind(storeId).run()
+    }
+  }
+
+  return c.json({ success: true })
+})
+
+/**
+ * DELETE /api/cards/stores/:storeId
+ * Delete a store and all its cards
+ */
+cards.delete('/stores/:storeId', async (c) => {
+  const userId = await getUserId(c)
+  if (!userId) return c.json({ error: 'ログインが必要です' }, 401)
+
+  const storeId = c.req.param('storeId')
+  const store = await c.env.DB.prepare('SELECT * FROM stores WHERE id = ? AND user_id = ?')
+    .bind(storeId, userId).first()
+  if (!store) return c.json({ error: '店舗が見つかりません' }, 404)
+
+  // Get all cards for this store
+  const { results: storeCards } = await c.env.DB.prepare(
+    'SELECT id FROM cards WHERE store_id = ?'
+  ).bind(storeId).all()
+
+  // Delete feedbacks, clicks, and cards for this store
+  for (const card of (storeCards || [])) {
+    await c.env.DB.prepare('DELETE FROM feedbacks WHERE card_id = ?').bind(card.id).run()
+    await c.env.DB.prepare('DELETE FROM clicks WHERE card_id = ?').bind(card.id).run()
+  }
+  await c.env.DB.prepare('DELETE FROM cards WHERE store_id = ?').bind(storeId).run()
+  await c.env.DB.prepare('DELETE FROM stores WHERE id = ?').bind(storeId).run()
 
   return c.json({ success: true })
 })

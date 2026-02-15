@@ -17,14 +17,25 @@ export type User = {
   name: string | null
   plan: string
   max_cards: number
+  max_stores: number
+  max_cards_per_store: number
   weekly_email: number
   created_at: string
   last_login_at: string | null
 }
 
+export type Store = {
+  id: number
+  user_id: number
+  name: string
+  google_url: string
+  created_at: string
+}
+
 export type Card = {
   id: number
   user_id: number | null
+  store_id: number | null
   store_name: string | null
   google_url: string
   short_code: string
