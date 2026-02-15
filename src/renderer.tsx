@@ -27,10 +27,10 @@ export const renderer = jsxRenderer(({ children, title }) => {
       },
       {
         '@type': 'Offer',
-        price: '1980',
+        price: '300',
         priceCurrency: 'JPY',
-        name: 'Proプラン（月額）',
-        description: 'Proプラン：店舗数無制限・QR無制限・フィードバック通知メール・RevQロゴ非表示'
+        name: 'Plusプラン（月額）',
+        description: 'Plusプラン：店舗20件・QR無制限・フィードバック通知メール・RevQロゴ非表示'
       }
     ],
     aggregateRating: {
@@ -189,6 +189,8 @@ export const renderer = jsxRenderer(({ children, title }) => {
                 <a href="/privacy" class="text-gray-400 hover:text-gray-600 transition-colors no-underline">プライバシーポリシー</a>
                 <span class="text-gray-300">|</span>
                 <a href="/terms" class="text-gray-400 hover:text-gray-600 transition-colors no-underline">利用規約</a>
+                <span class="text-gray-300">|</span>
+                <a href="/tokushoho" class="text-gray-400 hover:text-gray-600 transition-colors no-underline">特定商取引法</a>
               </div>
             )}
             <p class="text-center">© 2026 RevQ — Googleレビュー依頼カード作成ツール</p>

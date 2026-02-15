@@ -372,7 +372,7 @@ cards.get('/:id/pdf', async (c) => {
   let hideBranding = false
   if (card.user_id) {
     const owner = await c.env.DB.prepare('SELECT plan FROM users WHERE id = ?').bind(card.user_id).first()
-    if (owner && owner.plan === 'pro') {
+    if (owner && (owner.plan === 'plus' || owner.plan === 'pro')) {
       hideBranding = true
     }
   }

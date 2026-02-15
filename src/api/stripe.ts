@@ -3,15 +3,15 @@ import type { Bindings } from '../lib/types'
 
 const stripe = new Hono<{ Bindings: Bindings }>()
 
-// Stripe Price IDs
+// Stripe Price IDs (Plus plan)
 const PRICE_IDS = {
-  pro_monthly: 'price_1T14md4gzrhIsgWNBdnOnnsd',
-  pro_yearly: 'price_1T14me4gzrhIsgWNMRtdcQE5',
+  plus_monthly: 'price_1T15AI4gzrhIsgWNFe2nrhDA',   // ¥300/month
+  plus_yearly: 'price_1T15AO4gzrhIsgWNxFXSAmN0',     // ¥2,400/year
 }
 
-// Pro plan limits
-const PRO_LIMITS = {
-  max_stores: 999,
+// Plus plan limits
+const PLUS_LIMITS = {
+  max_stores: 20,
   max_cards_per_store: 999,
   max_cards: 999,
 }
@@ -58,7 +58,7 @@ stripe.post('/create-checkout', async (c) => {
   if (!c.env.STRIPE_SECRET_KEY) return c.json({ error: 'Stripe未設定' }, 500)
 
   const { interval } = await c.req.json<{ interval: 'monthly' | 'yearly' }>()
-  const priceId = interval === 'yearly' ? PRICE_IDS.pro_yearly : PRICE_IDS.pro_monthly
+  const priceId = interval === 'yearly' ? PRICE_IDS.plus_yearly : PRICE_IDS.plus_monthly
 
   const mainDomain = c.env.MAIN_DOMAIN || 'revq.jp'
   const baseUrl = `https://${mainDomain}`
@@ -166,7 +166,7 @@ stripe.post('/webhook', async (c) => {
 
         await c.env.DB.prepare(`
           UPDATE users SET
-            plan = 'pro',
+            plan = 'plus',
             stripe_subscription_id = ?,
             plan_interval = ?,
             plan_expires_at = ?,
@@ -178,13 +178,13 @@ stripe.post('/webhook', async (c) => {
           subscriptionId,
           interval,
           periodEnd,
-          PRO_LIMITS.max_stores,
-          PRO_LIMITS.max_cards_per_store,
-          PRO_LIMITS.max_cards,
+          PLUS_LIMITS.max_stores,
+          PLUS_LIMITS.max_cards_per_store,
+          PLUS_LIMITS.max_cards,
           userId
         ).run()
 
-        console.log(`[Stripe] User ${userId} upgraded to pro (${interval})`)
+        console.log(`[Stripe] User ${userId} upgraded to plus (${interval})`)
       }
       break
     }
@@ -199,7 +199,7 @@ stripe.post('/webhook', async (c) => {
 
         if (userId) {
           await c.env.DB.prepare(`
-            UPDATE users SET plan = 'pro', plan_expires_at = ? WHERE id = ?
+            UPDATE users SET plan = 'plus', plan_expires_at = ? WHERE id = ?
           `).bind(periodEnd, userId).run()
           console.log(`[Stripe] User ${userId} subscription renewed until ${periodEnd}`)
         }
@@ -236,7 +236,7 @@ stripe.post('/webhook', async (c) => {
           const interval = data.items?.data?.[0]?.price?.recurring?.interval || 'month'
           const periodEnd = new Date((data.current_period_end || 0) * 1000).toISOString()
           await c.env.DB.prepare(`
-            UPDATE users SET plan = 'pro', plan_interval = ?, plan_expires_at = ? WHERE id = ?
+            UPDATE users SET plan = 'plus', plan_interval = ?, plan_expires_at = ? WHERE id = ?
           `).bind(interval, periodEnd, userId).run()
         } else if (status === 'canceled' || status === 'unpaid') {
           await c.env.DB.prepare(`
@@ -264,7 +264,7 @@ stripe.get('/status', async (c) => {
   if (!user) return c.json({ error: 'ログインが必要です' }, 401)
 
   return c.json({
-    plan: user.plan || 'free',
+    plan: user.plan === 'pro' ? 'plus' : (user.plan || 'free'),  // backwards compat: treat 'pro' as 'plus'
     plan_interval: user.plan_interval || 'none',
     plan_expires_at: user.plan_expires_at || null,
     has_subscription: !!(user.stripe_subscription_id),

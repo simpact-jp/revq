@@ -790,7 +790,7 @@ async function initDashboardPage() {
       // Show success toast
       const toast = document.createElement('div')
       toast.className = 'fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg text-sm font-bold flex items-center gap-2 animate-bounce'
-      toast.innerHTML = '<i class="fas fa-check-circle"></i>Proプランへのアップグレードが完了しました！'
+      toast.innerHTML = '<i class="fas fa-check-circle"></i>Plusプランへのアップグレードが完了しました！'
       document.body.appendChild(toast)
       setTimeout(() => toast.remove(), 5000)
       // Clean URL
@@ -1796,7 +1796,7 @@ function initPricingPage() {
   const priceAmount = document.getElementById('price-amount')
   const priceInterval = document.getElementById('price-interval')
   const yearlyNote = document.getElementById('price-yearly-note')
-  const subscribeBtn = document.getElementById('btn-subscribe-pro')
+  const subscribeBtn = document.getElementById('btn-subscribe-plus')
 
   if (toggleBtn) {
     toggleBtn.addEventListener('click', () => {
@@ -1814,10 +1814,10 @@ function initPricingPage() {
       labelMonthly.classList.add('text-gray-400')
       labelYearly.classList.remove('text-gray-400')
       labelYearly.classList.add('text-gray-900')
-      if (priceAmount) priceAmount.textContent = '¥19,800'
+      if (priceAmount) priceAmount.textContent = '¥2,400'
       if (priceInterval) priceInterval.textContent = '/ 年'
       if (yearlyNote) {
-        yearlyNote.textContent = '月あたり¥1,650（2ヶ月分お得）'
+        yearlyNote.textContent = '月あたり¥200（2ヶ月分お得）'
         yearlyNote.classList.remove('hidden')
       }
     } else {
@@ -1828,7 +1828,7 @@ function initPricingPage() {
       labelMonthly.classList.add('text-gray-900')
       labelYearly.classList.remove('text-gray-900')
       labelYearly.classList.add('text-gray-400')
-      if (priceAmount) priceAmount.textContent = '¥1,980'
+      if (priceAmount) priceAmount.textContent = '¥300'
       if (priceInterval) priceInterval.textContent = '/ 月'
       if (yearlyNote) yearlyNote.classList.add('hidden')
     }
@@ -1845,8 +1845,8 @@ function initPricingPage() {
           window.location.href = '/login?redirect=pricing'
           return
         }
-        if (authData.user.plan === 'pro') {
-          alert('既にProプランをご利用中です。')
+        if (authData.user.plan === 'plus' || authData.user.plan === 'pro') {
+          alert('既にPlusプランをご利用中です。')
           return
         }
       } catch {
@@ -1872,7 +1872,7 @@ function initPricingPage() {
       } catch (err) {
         alert(err.message || 'エラーが発生しました')
         subscribeBtn.disabled = false
-        subscribeBtn.innerHTML = '<i class="fas fa-crown mr-2"></i>Pro プランに申し込む'
+        subscribeBtn.innerHTML = '<i class="fas fa-crown mr-2"></i>Plus プランに申し込む'
       }
     })
   }
@@ -1884,9 +1884,9 @@ function initPricingPage() {
     try {
       const res = await fetch('/api/auth/me')
       const data = await res.json()
-      if (data.user && data.user.plan === 'pro') {
+      if (data.user && (data.user.plan === 'plus' || data.user.plan === 'pro')) {
         if (subscribeBtn) {
-          subscribeBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Proプラン利用中'
+          subscribeBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Plusプラン利用中'
           subscribeBtn.disabled = true
           subscribeBtn.classList.remove('bg-brand-600', 'hover:bg-brand-700', 'shadow-lg')
           subscribeBtn.classList.add('bg-green-500', 'cursor-default')
@@ -1909,7 +1909,7 @@ async function renderPlanStatus(user) {
   const planContainer = document.getElementById('dashboard-plan')
   if (!planContainer) return
 
-  const isPro = user.plan === 'pro'
+  const isPro = user.plan === 'plus' || user.plan === 'pro'  // backwards compat
 
   if (isPro) {
     const intervalText = user.plan_interval === 'year' ? '年額プラン' : '月額プラン'
@@ -1920,13 +1920,13 @@ async function renderPlanStatus(user) {
           <div>
             <div class="flex items-center gap-2 mb-1">
               <i class="fas fa-crown text-amber-300"></i>
-              <span class="text-lg font-bold">Pro プラン</span>
+              <span class="text-lg font-bold">Plus プラン</span>
               <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full">${intervalText}</span>
             </div>
             <p class="text-sm text-blue-100">
               次回更新日: ${expiresText}
               <span class="mx-2">•</span>
-              店舗数・QR無制限
+              店芗2０件・QR無制限
             </p>
           </div>
           <button type="button" id="btn-manage-subscription" class="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-all">
@@ -1969,7 +1969,7 @@ async function renderPlanStatus(user) {
           </div>
           <a href="/pricing" class="inline-flex items-center justify-center gap-2 bg-brand-600 text-white font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-brand-700 transition-all shadow-sm no-underline">
             <i class="fas fa-crown text-amber-300"></i>
-            Pro にアップグレード
+            Plus にアップグレード
           </a>
         </div>
       </div>

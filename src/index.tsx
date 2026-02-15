@@ -10,6 +10,7 @@ import { AdminPage } from './pages/admin'
 import { PrivacyPage } from './pages/privacy'
 import { TermsPage } from './pages/terms'
 import { PricingPage } from './pages/pricing'
+import { TokushohoPage } from './pages/tokushoho'
 import authRoutes from './api/auth'
 import cardRoutes from './api/cards'
 import adminRoutes from './api/admin'
@@ -123,7 +124,7 @@ async function handleShortUrl(c: any, code: string) {
     let hideBranding = false
     if (card.user_id) {
       const owner = await c.env.DB.prepare('SELECT plan FROM users WHERE id = ?').bind(card.user_id).first()
-      if (owner && owner.plan === 'pro') hideBranding = true
+      if (owner && (owner.plan === 'plus' || owner.plan === 'pro')) hideBranding = true
     }
     return c.html(renderGatePage(storeName, googleUrl, cardId, mainSiteUrl, hideBranding))
   }
@@ -336,6 +337,12 @@ app.get('/terms', (c) => {
 app.get('/pricing', (c) => {
   if (isLinkDomain(c)) return c.redirect(`${getMainSiteUrl(c)}/pricing`, 302)
   return c.render(<PricingPage />, { title: '料金プラン — RevQ' })
+})
+
+// Tokushoho (特定商取引法に基づく表記)
+app.get('/tokushoho', (c) => {
+  if (isLinkDomain(c)) return c.redirect(`${getMainSiteUrl(c)}/tokushoho`, 302)
+  return c.render(<TokushohoPage />, { title: '特定商取引法に基づく表記 — RevQ' })
 })
 
 // Admin (Operator) — protected by Basic Auth (middleware defined above)

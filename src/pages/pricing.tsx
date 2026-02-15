@@ -81,7 +81,7 @@ export const PricingPage = () => {
               </a>
             </div>
 
-            {/* Pro Plan */}
+            {/* Plus Plan */}
             <div class="bg-white rounded-2xl border-2 border-brand-500 p-8 relative shadow-xl shadow-brand-500/10">
               <div class="absolute -top-3 left-1/2 -translate-x-1/2">
                 <span class="bg-brand-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg">
@@ -89,18 +89,18 @@ export const PricingPage = () => {
                 </span>
               </div>
               <div class="mb-6">
-                <h3 class="text-xl font-bold text-gray-900 mb-1">Pro プラン</h3>
+                <h3 class="text-xl font-bold text-gray-900 mb-1">Plus プラン</h3>
                 <p class="text-sm text-gray-500">本格運用に必要なすべてが揃う</p>
               </div>
-              <div class="mb-8" id="pro-price">
-                <span class="text-4xl font-extrabold text-gray-900" id="price-amount">¥1,980</span>
+              <div class="mb-8" id="plus-price">
+                <span class="text-4xl font-extrabold text-gray-900" id="price-amount">¥300</span>
                 <span class="text-sm text-gray-400 ml-1" id="price-interval">/ 月</span>
-                <p class="text-xs text-gray-400 mt-1 hidden" id="price-yearly-note">¥19,800/年（月あたり¥1,650）</p>
+                <p class="text-xs text-gray-400 mt-1 hidden" id="price-yearly-note">¥2,400/年（月あたり¥200）</p>
               </div>
               <ul class="space-y-3 mb-8">
                 <li class="flex items-start gap-3 text-sm text-gray-600">
                   <i class="fas fa-check text-brand-500 mt-0.5 flex-shrink-0"></i>
-                  <span>店舗登録 <strong class="text-brand-600">無制限</strong></span>
+                  <span>店舗登録 <strong class="text-brand-600">20件</strong>まで</span>
                 </li>
                 <li class="flex items-start gap-3 text-sm text-gray-600">
                   <i class="fas fa-check text-brand-500 mt-0.5 flex-shrink-0"></i>
@@ -124,18 +124,18 @@ export const PricingPage = () => {
                 </li>
                 <li class="flex items-start gap-3 text-sm font-semibold text-gray-800">
                   <i class="fas fa-check text-brand-500 mt-0.5 flex-shrink-0"></i>
-                  <span>フィードバック通知メール <span class="text-xs text-brand-600 bg-brand-50 px-1.5 py-0.5 rounded-full ml-1">Pro</span></span>
+                  <span>フィードバック通知メール <span class="text-xs text-brand-600 bg-brand-50 px-1.5 py-0.5 rounded-full ml-1">Plus</span></span>
                 </li>
                 <li class="flex items-start gap-3 text-sm font-semibold text-gray-800">
                   <i class="fas fa-check text-brand-500 mt-0.5 flex-shrink-0"></i>
-                  <span>RevQロゴ非表示 <span class="text-xs text-brand-600 bg-brand-50 px-1.5 py-0.5 rounded-full ml-1">Pro</span></span>
+                  <span>RevQロゴ非表示 <span class="text-xs text-brand-600 bg-brand-50 px-1.5 py-0.5 rounded-full ml-1">Plus</span></span>
                 </li>
               </ul>
-              <button type="button" id="btn-subscribe-pro" class="block w-full text-center bg-brand-600 text-white font-bold py-3.5 rounded-xl hover:bg-brand-700 transition-all shadow-lg shadow-brand-600/30">
-                <i class="fas fa-crown mr-2"></i>Pro プランに申し込む
+              <button type="button" id="btn-subscribe-plus" class="block w-full text-center bg-brand-600 text-white font-bold py-3.5 rounded-xl hover:bg-brand-700 transition-all shadow-lg shadow-brand-600/30">
+                <i class="fas fa-crown mr-2"></i>Plus プランに申し込む
               </button>
               <p class="text-[11px] text-gray-400 text-center mt-3">
-                <i class="fas fa-shield-alt mr-1"></i>いつでもキャンセル可能・日割り返金対応
+                <i class="fas fa-shield-alt mr-1"></i>いつでもキャンセル可能
               </p>
             </div>
           </div>
@@ -152,14 +152,14 @@ export const PricingPage = () => {
                 <tr class="bg-gray-50 border-b border-gray-200">
                   <th class="text-left text-sm font-semibold text-gray-600 px-6 py-4">機能</th>
                   <th class="text-center text-sm font-semibold text-gray-600 px-4 py-4 w-28">Free</th>
-                  <th class="text-center text-sm font-semibold text-brand-600 px-4 py-4 w-28 bg-brand-50/50">Pro</th>
+                  <th class="text-center text-sm font-semibold text-brand-600 px-4 py-4 w-28 bg-brand-50/50">Plus</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100">
                 <tr>
                   <td class="px-6 py-3.5 text-sm text-gray-700">店舗登録数</td>
                   <td class="px-4 py-3.5 text-center text-sm text-gray-600">2件</td>
-                  <td class="px-4 py-3.5 text-center text-sm font-bold text-brand-600 bg-brand-50/30">無制限</td>
+                  <td class="px-4 py-3.5 text-center text-sm font-bold text-brand-600 bg-brand-50/30">20件</td>
                 </tr>
                 <tr>
                   <td class="px-6 py-3.5 text-sm text-gray-700">QRカード（各店舗）</td>
@@ -223,7 +223,7 @@ export const PricingPage = () => {
                 有料プランはいつでもキャンセルできますか？
               </h3>
               <p class="text-sm text-gray-600 leading-relaxed">
-                はい、いつでもキャンセル可能です。キャンセル後も現在の請求期間の終了までProプランの機能をご利用いただけます。
+                はい、いつでもキャンセル可能です。キャンセル後も現在の請求期間の終了までPlusプランの機能をご利用いただけます。
               </p>
             </div>
             <div class="bg-white rounded-xl border border-gray-200 p-5">
@@ -241,13 +241,13 @@ export const PricingPage = () => {
                 無料プランから有料プランへの切り替えは簡単ですか？
               </h3>
               <p class="text-sm text-gray-600 leading-relaxed">
-                はい、管理画面から数クリックでアップグレードできます。現在のデータはそのまま引き継がれ、すぐにProプランの機能をご利用いただけます。
+                はい、管理画面から数クリックでアップグレードできます。現在のデータはそのまま引き継がれ、すぐにPlusプランの機能をご利用いただけます。
               </p>
             </div>
             <div class="bg-white rounded-xl border border-gray-200 p-5">
               <h3 class="font-bold text-gray-900 mb-2">
                 <i class="fas fa-question-circle text-brand-500 mr-2"></i>
-                Proプランをキャンセルしたらデータはどうなりますか？
+                Plusプランをキャンセルしたらデータはどうなりますか？
               </h3>
               <p class="text-sm text-gray-600 leading-relaxed">
                 キャンセル後もデータは削除されません。無料プランの制限（店舗2件・各2枚のQRコード）に戻りますが、既存のカードやデータはそのまま保持されます。新規作成のみ制限がかかります。
@@ -273,11 +273,14 @@ export const PricingPage = () => {
         </div>
       </section>
 
-      {/* Stripe badge */}
+      {/* Stripe badge + 特商法リンク */}
       <div class="text-center py-6 bg-gray-50">
         <p class="text-xs text-gray-400">
           <i class="fas fa-lock mr-1"></i>
           安全な決済は <strong>Stripe</strong> により処理されます
+        </p>
+        <p class="text-xs text-gray-400 mt-2">
+          <a href="/tokushoho" class="text-gray-400 hover:text-gray-600 underline">特定商取引法に基づく表記</a>
         </p>
       </div>
     </div>
