@@ -19,6 +19,9 @@ export const AdminPage = () => {
           <button type="button" class="admin-tab px-5 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition-colors" data-tab="cards">
             <i class="fas fa-id-card mr-1.5"></i>カード
           </button>
+          <button type="button" class="admin-tab px-5 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition-colors" data-tab="feedbacks">
+            <i class="fas fa-comment-dots mr-1.5"></i>フィードバック
+          </button>
           <button type="button" class="admin-tab px-5 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition-colors" data-tab="otp">
             <i class="fas fa-envelope mr-1.5"></i>OTP/メール
           </button>
@@ -105,6 +108,7 @@ export const AdminPage = () => {
                   <th class="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">短縮URL</th>
                   <th class="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">作成者</th>
                   <th class="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">テンプレート</th>
+                  <th class="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">ゲート</th>
                   <th class="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">クリック</th>
                   <th class="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">作成日</th>
                   <th class="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">状態</th>
@@ -112,9 +116,21 @@ export const AdminPage = () => {
                 </tr>
               </thead>
               <tbody id="admin-cards-tbody" class="divide-y divide-gray-100">
-                <tr><td colspan={8} class="px-5 py-8 text-center text-gray-400"><i class="fas fa-spinner fa-spin mr-1"></i>読み込み中…</td></tr>
+                <tr><td colspan={9} class="px-5 py-8 text-center text-gray-400"><i class="fas fa-spinner fa-spin mr-1"></i>読み込み中…</td></tr>
               </tbody>
             </table>
+          </div>
+        </div>
+      </div>
+
+      {/* TAB: Feedbacks */}
+      <div id="tab-feedbacks" class="admin-tab-content hidden">
+        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h3 class="font-bold text-gray-900">フィードバック一覧（<span id="admin-feedbacks-count">-</span>）</h3>
+          </div>
+          <div id="admin-feedbacks-list" class="divide-y divide-gray-100">
+            <div class="px-5 py-8 text-center text-gray-400"><i class="fas fa-spinner fa-spin mr-1"></i>読み込み中…</div>
           </div>
         </div>
       </div>

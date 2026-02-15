@@ -15,6 +15,7 @@ export type User = {
   name: string | null
   plan: string
   max_cards: number
+  weekly_email: number
   created_at: string
   last_login_at: string | null
 }
@@ -29,6 +30,7 @@ export type Card = {
   image_key: string | null
   cta_text: string | null
   label: string | null
+  gate_enabled: number
   created_at: string
   status: string
 }
@@ -62,6 +64,14 @@ export type CreateCardRequest = {
 
 export type CardWithClicks = Card & {
   click_count: number
+}
+
+export type Feedback = {
+  id: number
+  card_id: number
+  message: string
+  created_at: string
+  is_read: number
 }
 
 // PDF generation options

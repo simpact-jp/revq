@@ -609,6 +609,8 @@ async function initDashboardPage() {
     if (statsContainer) {
       const totalCards = cards.length
       const totalClicks = cards.reduce((sum, c) => sum + (c.click_count || 0), 0)
+      const totalFeedbacks = cards.reduce((sum, c) => sum + (c.feedback_count || 0), 0)
+      const unreadFeedbacks = cards.reduce((sum, c) => sum + (c.unread_feedback || 0), 0)
       statsContainer.innerHTML = `
         <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
           <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">カード数</p>
@@ -617,6 +619,10 @@ async function initDashboardPage() {
         <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
           <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">総クリック数</p>
           <p class="text-2xl sm:text-3xl font-bold text-brand-600">${totalClicks}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">フィードバック</p>
+          <p class="text-2xl sm:text-3xl font-bold text-amber-600">${totalFeedbacks}${unreadFeedbacks > 0 ? ` <span class="text-sm font-normal bg-red-500 text-white px-2 py-0.5 rounded-full">${unreadFeedbacks}件未読</span>` : ''}</p>
         </div>
       `
     }
@@ -654,6 +660,43 @@ async function initDashboardPage() {
                 <p class="text-[10px] text-gray-400 uppercase tracking-wider">クリック</p>
               </div>
             </div>
+
+            <!-- Gate Toggle -->
+            <div class="flex items-center justify-between bg-gradient-to-r ${card.gate_enabled ? 'from-green-50 to-emerald-50 border-green-200' : 'from-gray-50 to-gray-50 border-gray-200'} border rounded-lg p-3 mb-4 transition-all">
+              <div class="flex items-center gap-2">
+                <i class="fas fa-shield-alt ${card.gate_enabled ? 'text-green-600' : 'text-gray-400'} text-sm"></i>
+                <div>
+                  <p class="text-xs font-semibold ${card.gate_enabled ? 'text-green-800' : 'text-gray-600'}">満足/不満ゲート</p>
+                  <p class="text-[10px] ${card.gate_enabled ? 'text-green-600' : 'text-gray-400'}">
+                    ${card.gate_enabled ? 'ON — 満足→Googleレビュー / 不満→フォーム' : 'OFF — 直接Googleレビューへ'}
+                  </p>
+                </div>
+              </div>
+              <button type="button" class="btn-toggle-gate relative w-11 h-6 rounded-full transition-all ${card.gate_enabled ? 'bg-green-500' : 'bg-gray-300'}" data-card-id="${card.id}" data-enabled="${card.gate_enabled ? '1' : '0'}">
+                <span class="absolute top-0.5 ${card.gate_enabled ? 'left-[calc(100%-1.375rem)]' : 'left-0.5'} w-5 h-5 bg-white rounded-full shadow-sm transition-all"></span>
+              </button>
+            </div>
+
+            <!-- Feedback Badge + Viewer -->
+            ${card.gate_enabled ? `
+            <div class="mb-4">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                  <i class="fas fa-comment-dots text-amber-500 text-sm"></i>
+                  <span class="text-xs font-semibold text-gray-600">フィードバック</span>
+                  ${card.feedback_count > 0 ? `<span class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-bold">${card.feedback_count}件</span>` : ''}
+                  ${card.unread_feedback > 0 ? `<span class="text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded-full font-bold animate-pulse">${card.unread_feedback}件未読</span>` : ''}
+                </div>
+                ${card.feedback_count > 0 ? `
+                <button type="button" class="btn-view-feedbacks text-xs text-brand-600 hover:text-brand-700 font-semibold" data-card-id="${card.id}">
+                  <i class="fas fa-eye mr-0.5"></i>表示
+                </button>
+                ` : ''}
+              </div>
+              <div class="feedbacks-container hidden" data-card-id="${card.id}"></div>
+            </div>
+            ` : ''}
+
             <div class="flex items-center gap-2 bg-gray-50 rounded-lg p-3 mb-4">
               <i class="fas fa-link text-gray-400 text-sm"></i>
               <code class="text-sm font-mono text-brand-600 flex-1 truncate">${escapeHtml(card.short_url)}</code>
@@ -747,6 +790,114 @@ async function initDashboardPage() {
 }
 
 function attachDashboardEvents(container) {
+  // Gate toggle
+  container.querySelectorAll('.btn-toggle-gate').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const cardId = btn.dataset.cardId
+      const currentlyEnabled = btn.dataset.enabled === '1'
+      const newEnabled = currentlyEnabled ? 0 : 1
+
+      // Optimistic UI update
+      const knob = btn.querySelector('span')
+      if (newEnabled) {
+        btn.classList.remove('bg-gray-300')
+        btn.classList.add('bg-green-500')
+        knob.style.left = 'calc(100% - 1.375rem)'
+      } else {
+        btn.classList.remove('bg-green-500')
+        btn.classList.add('bg-gray-300')
+        knob.style.left = '0.125rem'
+      }
+      btn.dataset.enabled = String(newEnabled)
+
+      try {
+        const res = await fetch(`/api/cards/${cardId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ gate_enabled: newEnabled })
+        })
+        if (!res.ok) throw new Error()
+        // Reload dashboard to update full UI (gate description, feedback section)
+        initDashboardPage()
+      } catch {
+        // Revert on error
+        btn.dataset.enabled = String(currentlyEnabled ? 1 : 0)
+        if (currentlyEnabled) {
+          btn.classList.remove('bg-gray-300')
+          btn.classList.add('bg-green-500')
+          knob.style.left = 'calc(100% - 1.375rem)'
+        } else {
+          btn.classList.remove('bg-green-500')
+          btn.classList.add('bg-gray-300')
+          knob.style.left = '0.125rem'
+        }
+      }
+    })
+  })
+
+  // View feedbacks
+  container.querySelectorAll('.btn-view-feedbacks').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const cardId = btn.dataset.cardId
+      const fbContainer = container.querySelector(`.feedbacks-container[data-card-id="${cardId}"]`)
+      if (!fbContainer) return
+
+      // Toggle visibility
+      if (!fbContainer.classList.contains('hidden')) {
+        fbContainer.classList.add('hidden')
+        btn.innerHTML = '<i class="fas fa-eye mr-0.5"></i>表示'
+        return
+      }
+
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-0.5"></i>読み込み中…'
+      try {
+        const res = await fetch(`/api/cards/${cardId}/feedbacks`)
+        const data = await res.json()
+        const feedbacks = data.feedbacks || []
+
+        if (feedbacks.length === 0) {
+          fbContainer.innerHTML = '<p class="text-xs text-gray-400 text-center py-2">フィードバックはありません</p>'
+        } else {
+          fbContainer.innerHTML = `
+            <div class="space-y-2 max-h-64 overflow-y-auto">
+              ${feedbacks.map(fb => `
+                <div class="bg-white border ${fb.is_read ? 'border-gray-100' : 'border-amber-200 bg-amber-50/30'} rounded-lg p-3 text-xs">
+                  <div class="flex items-start justify-between gap-2">
+                    <p class="text-gray-700 leading-relaxed flex-1 whitespace-pre-wrap">${escapeHtml(fb.message)}</p>
+                    ${!fb.is_read ? '<span class="flex-shrink-0 w-2 h-2 bg-red-500 rounded-full mt-1"></span>' : ''}
+                  </div>
+                  <p class="text-[10px] text-gray-400 mt-1.5">${formatDateTimeJST(fb.created_at)}</p>
+                </div>
+              `).join('')}
+            </div>
+            <button type="button" class="btn-mark-all-read w-full text-center text-[11px] text-brand-600 hover:text-brand-700 font-semibold mt-2 py-1" data-card-id="${cardId}">
+              <i class="fas fa-check-double mr-0.5"></i>すべて既読にする
+            </button>
+          `
+
+          // Attach mark-all-read
+          const markBtn = fbContainer.querySelector('.btn-mark-all-read')
+          if (markBtn) {
+            markBtn.addEventListener('click', async () => {
+              markBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'
+              await fetch(`/api/cards/${cardId}/feedbacks/read`, { method: 'PUT' })
+              // Reload
+              initDashboardPage()
+            })
+          }
+        }
+
+        fbContainer.classList.remove('hidden')
+        btn.innerHTML = '<i class="fas fa-eye-slash mr-0.5"></i>閉じる'
+
+        // Auto mark as read
+        await fetch(`/api/cards/${cardId}/feedbacks/read`, { method: 'PUT' })
+      } catch {
+        btn.innerHTML = '<i class="fas fa-eye mr-0.5"></i>表示'
+      }
+    })
+  })
+
   // Copy URLs
   container.querySelectorAll('.copy-url-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -913,6 +1064,7 @@ async function initAdminPage() {
   loadAdminRecentActivity()
   loadAdminUsers()
   loadAdminCards()
+  loadAdminFeedbacks()
   loadAdminOtp()
 }
 
@@ -965,6 +1117,24 @@ async function loadAdminStats() {
             <i class="fas ${s.hasResendKey ? 'fa-check-circle' : 'fa-exclamation-circle'} mr-0.5"></i>
             ${s.hasResendKey ? 'メール送信有効' : 'メール未設定'}
           </p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-5">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">フィードバック</p>
+            <div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center"><i class="fas fa-comment-dots text-amber-600 text-sm"></i></div>
+          </div>
+          <p class="text-3xl font-bold text-amber-600">${s.totalFeedbacks || 0}</p>
+          <p class="text-xs ${(s.unreadFeedbacks || 0) > 0 ? 'text-red-500' : 'text-gray-400'} mt-1">
+            ${(s.unreadFeedbacks || 0) > 0 ? `<i class="fas fa-exclamation-circle mr-0.5"></i>${s.unreadFeedbacks}件未読` : '<i class="fas fa-check-circle mr-0.5"></i>未読なし'}
+          </p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-5">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">ゲート有効</p>
+            <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center"><i class="fas fa-shield-alt text-green-600 text-sm"></i></div>
+          </div>
+          <p class="text-3xl font-bold text-green-600">${s.gateEnabledCards || 0}</p>
+          <p class="text-xs text-gray-400 mt-1">/ ${s.activeCards || 0} 稼働中</p>
         </div>
       `
     }
@@ -1078,6 +1248,9 @@ async function loadAdminCards() {
           <td class="px-5 py-3.5"><code class="text-xs font-mono text-brand-600 bg-brand-50 px-2 py-0.5 rounded">${escapeHtml(c.short_url)}</code></td>
           <td class="px-5 py-3.5 text-gray-600">${escapeHtml(c.user_name || '未登録')}</td>
           <td class="px-5 py-3.5"><span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">${escapeHtml(c.template)}</span></td>
+          <td class="px-5 py-3.5">
+            ${c.gate_enabled ? '<span class="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full font-semibold"><i class="fas fa-shield-alt mr-0.5"></i>ON</span>' : '<span class="text-xs text-gray-400">OFF</span>'}
+          </td>
           <td class="px-5 py-3.5 font-bold text-brand-600">${c.click_count}</td>
           <td class="px-5 py-3.5 text-gray-500">${formatDate(c.created_at)}</td>
           <td class="px-5 py-3.5">
@@ -1120,6 +1293,79 @@ async function loadAdminCards() {
           btn.closest('tr').remove()
         })
       })
+    }
+  } catch {}
+}
+
+/* =============================================
+   ADMIN: Feedbacks Tab
+============================================= */
+async function loadAdminFeedbacks() {
+  try {
+    const res = await fetch('/api/admin/feedbacks')
+    const data = await res.json()
+    const listEl = document.getElementById('admin-feedbacks-list')
+    const countEl = document.getElementById('admin-feedbacks-count')
+    const feedbacks = data.feedbacks || []
+
+    if (countEl) countEl.textContent = `${feedbacks.length}件`
+
+    if (listEl) {
+      if (feedbacks.length === 0) {
+        listEl.innerHTML = '<div class="px-5 py-12 text-center text-gray-400"><i class="fas fa-comment-slash text-3xl mb-3 block"></i><p>フィードバックはまだありません</p></div>'
+      } else {
+        listEl.innerHTML = feedbacks.map(fb => `
+          <div class="px-5 py-4 hover:bg-gray-50 transition-colors ${fb.is_read ? '' : 'bg-amber-50/40'}" data-fb-id="${fb.id}">
+            <div class="flex items-start gap-4">
+              <div class="flex-shrink-0 mt-1">
+                ${fb.is_read
+                  ? '<div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center"><i class="fas fa-comment text-gray-400 text-sm"></i></div>'
+                  : '<div class="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center"><i class="fas fa-comment-dots text-amber-600 text-sm"></i></div>'
+                }
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1 flex-wrap">
+                  <span class="text-sm font-semibold text-gray-800">${escapeHtml(fb.store_name || '(店名なし)')}</span>
+                  ${fb.label ? `<span class="text-[10px] bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded-full"><i class="fas fa-tag mr-0.5"></i>${escapeHtml(fb.label)}</span>` : ''}
+                  ${!fb.is_read ? '<span class="text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded-full font-bold">未読</span>' : ''}
+                  <span class="text-[10px] text-gray-400">${escapeHtml(fb.owner_email || '')}</span>
+                </div>
+                <p class="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap mb-1.5">${escapeHtml(fb.message)}</p>
+                <p class="text-[10px] text-gray-400">${formatDateTimeJST(fb.created_at)}</p>
+              </div>
+              <div class="flex items-center gap-1 flex-shrink-0">
+                ${!fb.is_read ? `
+                <button type="button" class="btn-admin-mark-read p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-md transition-all" data-id="${fb.id}" title="既読にする">
+                  <i class="fas fa-check text-sm"></i>
+                </button>
+                ` : ''}
+                <button type="button" class="btn-admin-delete-fb p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-all" data-id="${fb.id}" title="削除">
+                  <i class="fas fa-trash text-sm"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        `).join('')
+
+        // Mark as read
+        listEl.querySelectorAll('.btn-admin-mark-read').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            await fetch(`/api/admin/feedbacks/${btn.dataset.id}/read`, { method: 'PUT' })
+            loadAdminFeedbacks()
+            loadAdminStats()
+          })
+        })
+
+        // Delete feedback
+        listEl.querySelectorAll('.btn-admin-delete-fb').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            if (!confirm('このフィードバックを削除しますか？')) return
+            await fetch(`/api/admin/feedbacks/${btn.dataset.id}`, { method: 'DELETE' })
+            loadAdminFeedbacks()
+            loadAdminStats()
+          })
+        })
+      }
     }
   } catch {}
 }

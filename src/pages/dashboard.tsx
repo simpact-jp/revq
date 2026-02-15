@@ -31,7 +31,11 @@ export const DashboardPage = () => {
       </div>
 
       {/* Summary Stats — filled by JS */}
-      <div id="dashboard-stats" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div id="dashboard-stats" class="grid grid-cols-3 gap-4 mb-8">
+        <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 animate-pulse">
+          <div class="h-3 w-16 bg-gray-200 rounded mb-2"></div>
+          <div class="h-8 w-12 bg-gray-200 rounded"></div>
+        </div>
         <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 animate-pulse">
           <div class="h-3 w-16 bg-gray-200 rounded mb-2"></div>
           <div class="h-8 w-12 bg-gray-200 rounded"></div>

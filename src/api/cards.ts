@@ -95,7 +95,7 @@ cards.get('/', async (c) => {
   }
 
   const { results } = await c.env.DB.prepare(`
-    SELECT c.id, c.store_name, c.google_url, c.short_code, c.template, c.cta_text, c.label, c.created_at, c.status,
+    SELECT c.id, c.store_name, c.google_url, c.short_code, c.template, c.cta_text, c.label, c.gate_enabled, c.created_at, c.status,
            COUNT(cl.id) as click_count
     FROM cards c
     LEFT JOIN clicks cl ON cl.card_id = c.id
@@ -106,8 +106,24 @@ cards.get('/', async (c) => {
 
   const origin = new URL(c.req.url).origin
 
-  // Fetch recent clicks (latest 3) for each card
+  // Fetch feedback counts for each card
   const cardIds = (results || []).map((card: any) => card.id)
+  let feedbackCountMap: Record<number, number> = {}
+  let unreadFeedbackMap: Record<number, number> = {}
+  if (cardIds.length > 0) {
+    const fbPlaceholders = cardIds.map(() => '?').join(',')
+    const { results: fbCounts } = await c.env.DB.prepare(`
+      SELECT card_id, COUNT(*) as total, SUM(CASE WHEN is_read = 0 THEN 1 ELSE 0 END) as unread
+      FROM feedbacks WHERE card_id IN (${fbPlaceholders})
+      GROUP BY card_id
+    `).bind(...cardIds).all()
+    for (const fb of (fbCounts || [])) {
+      feedbackCountMap[fb.card_id as number] = fb.total as number
+      unreadFeedbackMap[fb.card_id as number] = fb.unread as number
+    }
+  }
+
+  // Fetch recent clicks (latest 3) for each card
   let recentClicksMap: Record<number, string[]> = {}
   if (cardIds.length > 0) {
     const placeholders = cardIds.map(() => '?').join(',')
@@ -132,6 +148,8 @@ cards.get('/', async (c) => {
     ...card,
     short_url: `${origin}/r/${card.short_code}`,
     recent_clicks: recentClicksMap[card.id] || [],
+    feedback_count: feedbackCountMap[card.id] || 0,
+    unread_feedback: unreadFeedbackMap[card.id] || 0,
   }))
 
   // Return user's card limit info
@@ -174,6 +192,7 @@ cards.put('/:id', async (c) => {
     cta_text?: string | null
     template?: string
     label?: string | null
+    gate_enabled?: number
   }>()
 
   const updates: string[] = []
@@ -194,6 +213,10 @@ cards.put('/:id', async (c) => {
   if (body.label !== undefined) {
     updates.push('label = ?')
     values.push(body.label || null)
+  }
+  if (body.gate_enabled !== undefined) {
+    updates.push('gate_enabled = ?')
+    values.push(body.gate_enabled ? 1 : 0)
   }
 
   if (updates.length > 0) {
@@ -298,6 +321,49 @@ cards.get('/:id/pdf', async (c) => {
 })
 
 /**
+ * GET /api/cards/:id/feedbacks
+ * Get feedbacks for a card (owner only)
+ */
+cards.get('/:id/feedbacks', async (c) => {
+  const userId = await getUserId(c)
+  if (!userId) return c.json({ error: 'ログインが必要です' }, 401)
+
+  const id = c.req.param('id')
+  const card = await c.env.DB.prepare('SELECT * FROM cards WHERE id = ? AND user_id = ?')
+    .bind(id, userId).first()
+  if (!card) return c.json({ error: 'カードが見つかりません' }, 404)
+
+  const { results } = await c.env.DB.prepare(`
+    SELECT id, message, created_at, is_read
+    FROM feedbacks
+    WHERE card_id = ?
+    ORDER BY created_at DESC
+    LIMIT 50
+  `).bind(id).all()
+
+  return c.json({ feedbacks: results || [] })
+})
+
+/**
+ * PUT /api/cards/:id/feedbacks/read
+ * Mark all feedbacks for a card as read
+ */
+cards.put('/:id/feedbacks/read', async (c) => {
+  const userId = await getUserId(c)
+  if (!userId) return c.json({ error: 'ログインが必要です' }, 401)
+
+  const id = c.req.param('id')
+  const card = await c.env.DB.prepare('SELECT * FROM cards WHERE id = ? AND user_id = ?')
+    .bind(id, userId).first()
+  if (!card) return c.json({ error: 'カードが見つかりません' }, 404)
+
+  await c.env.DB.prepare('UPDATE feedbacks SET is_read = 1 WHERE card_id = ? AND is_read = 0')
+    .bind(id).run()
+
+  return c.json({ success: true })
+})
+
+/**
  * DELETE /api/cards/:id
  */
 cards.delete('/:id', async (c) => {
@@ -309,6 +375,7 @@ cards.delete('/:id', async (c) => {
     .bind(id, userId).first()
   if (!card) return c.json({ error: 'カードが見つかりません' }, 404)
 
+  await c.env.DB.prepare('DELETE FROM feedbacks WHERE card_id = ?').bind(id).run()
   await c.env.DB.prepare('DELETE FROM clicks WHERE card_id = ?').bind(id).run()
   await c.env.DB.prepare('DELETE FROM cards WHERE id = ?').bind(id).run()
 

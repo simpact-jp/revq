@@ -26,6 +26,14 @@ admin.get('/stats', async (c) => {
   const totalOtps = await c.env.DB.prepare('SELECT COUNT(*) as count FROM otps').first()
   const weekOtps = await c.env.DB.prepare('SELECT COUNT(*) as count FROM otps WHERE created_at >= ?').bind(weekAgo).first()
 
+  // Feedback stats
+  const totalFeedbacks = await c.env.DB.prepare('SELECT COUNT(*) as count FROM feedbacks').first()
+  const unreadFeedbacks = await c.env.DB.prepare('SELECT COUNT(*) as count FROM feedbacks WHERE is_read = 0').first()
+  const weekFeedbacks = await c.env.DB.prepare('SELECT COUNT(*) as count FROM feedbacks WHERE created_at >= ?').bind(weekAgo).first()
+
+  // Gate stats
+  const gateEnabledCards = await c.env.DB.prepare('SELECT COUNT(*) as count FROM cards WHERE gate_enabled = 1').first()
+
   return c.json({
     totalUsers: totalUsers?.count || 0,
     totalCards: totalCards?.count || 0,
@@ -36,6 +44,10 @@ admin.get('/stats', async (c) => {
     weekClicks: weekClicks?.count || 0,
     totalOtps: totalOtps?.count || 0,
     weekOtps: weekOtps?.count || 0,
+    totalFeedbacks: totalFeedbacks?.count || 0,
+    unreadFeedbacks: unreadFeedbacks?.count || 0,
+    weekFeedbacks: weekFeedbacks?.count || 0,
+    gateEnabledCards: gateEnabledCards?.count || 0,
     hasResendKey: !!c.env.RESEND_API_KEY,
   })
 })
@@ -62,7 +74,7 @@ admin.get('/users', async (c) => {
  */
 admin.get('/cards', async (c) => {
   const { results } = await c.env.DB.prepare(`
-    SELECT c.id, c.store_name, c.google_url, c.short_code, c.template, c.cta_text, c.label, c.created_at, c.status,
+    SELECT c.id, c.store_name, c.google_url, c.short_code, c.template, c.cta_text, c.label, c.gate_enabled, c.created_at, c.status,
            u.name as user_name, u.email as user_email,
            COUNT(cl.id) as click_count
     FROM cards c
@@ -156,6 +168,45 @@ admin.delete('/users/:id', async (c) => {
   `).bind(id).run()
   await c.env.DB.prepare('DELETE FROM cards WHERE user_id = ?').bind(id).run()
   await c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(id).run()
+  return c.json({ success: true })
+})
+
+/**
+ * GET /api/admin/feedbacks
+ * List all feedbacks for admin
+ */
+admin.get('/feedbacks', async (c) => {
+  const { results } = await c.env.DB.prepare(`
+    SELECT f.id, f.card_id, f.message, f.created_at, f.is_read,
+           c.store_name, c.label, c.short_code,
+           u.email as owner_email
+    FROM feedbacks f
+    JOIN cards c ON f.card_id = c.id
+    LEFT JOIN users u ON c.user_id = u.id
+    ORDER BY f.created_at DESC
+    LIMIT 100
+  `).all()
+
+  return c.json({ feedbacks: results || [] })
+})
+
+/**
+ * PUT /api/admin/feedbacks/:id/read
+ * Mark a feedback as read
+ */
+admin.put('/feedbacks/:id/read', async (c) => {
+  const id = c.req.param('id')
+  await c.env.DB.prepare('UPDATE feedbacks SET is_read = 1 WHERE id = ?').bind(id).run()
+  return c.json({ success: true })
+})
+
+/**
+ * DELETE /api/admin/feedbacks/:id
+ * Delete a feedback
+ */
+admin.delete('/feedbacks/:id', async (c) => {
+  const id = c.req.param('id')
+  await c.env.DB.prepare('DELETE FROM feedbacks WHERE id = ?').bind(id).run()
   return c.json({ success: true })
 })
 
