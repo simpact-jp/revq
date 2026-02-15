@@ -10,11 +10,12 @@
       "database_name": "revuq-production",
       "database_id": "761a2348-4d33-4cd7-9341-3cd9bae78785"
     }
-  ],
-  // Cron Triggers: Weekly report every Monday 00:00 UTC (= 09:00 JST)
-  "triggers": {
-    "crons": ["0 0 * * 1"]
-  }
+  ]
+  // Cron Triggers: Configure in Cloudflare Dashboard
+  // Workers & Pages → revuq → Settings → Triggers → Cron Triggers
+  // Expression: 0 0 * * 1 (Every Monday 00:00 UTC = 09:00 JST)
+  // The scheduled handler is exported from _worker.js
+  //
   // R2 — 有効化後に追加
   // "r2_buckets": [
   //   {
