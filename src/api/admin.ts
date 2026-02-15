@@ -62,7 +62,7 @@ admin.get('/users', async (c) => {
  */
 admin.get('/cards', async (c) => {
   const { results } = await c.env.DB.prepare(`
-    SELECT c.id, c.store_name, c.google_url, c.short_code, c.template, c.cta_text, c.created_at, c.status,
+    SELECT c.id, c.store_name, c.google_url, c.short_code, c.template, c.cta_text, c.label, c.created_at, c.status,
            u.name as user_name, u.email as user_email,
            COUNT(cl.id) as click_count
     FROM cards c
@@ -104,6 +104,7 @@ admin.put('/cards/:id', async (c) => {
     store_name?: string | null
     cta_text?: string | null
     template?: string
+    label?: string | null
   }>()
 
   const updates: string[] = []
@@ -120,6 +121,10 @@ admin.put('/cards/:id', async (c) => {
   if (body.template !== undefined) {
     updates.push('template = ?')
     values.push(body.template)
+  }
+  if (body.label !== undefined) {
+    updates.push('label = ?')
+    values.push(body.label || null)
   }
 
   if (updates.length > 0) {

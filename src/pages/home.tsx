@@ -382,6 +382,25 @@ export const HomePage = () => {
                   <p class="mt-1.5 text-xs text-gray-400">未入力の場合、カードに店名は表示されません</p>
                 </div>
 
+                {/* Card Label */}
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-1.5" for="card-label">
+                    カードラベル <span class="text-gray-400 font-normal text-xs">（任意）</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="card-label"
+                    name="label"
+                    placeholder="例）レジ横用、壁面掲示用"
+                    maxlength={30}
+                    class="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all"
+                  />
+                  <p class="mt-1.5 text-xs text-gray-400 flex items-start gap-1">
+                    <i class="fas fa-info-circle mt-0.5 text-gray-300"></i>
+                    設置場所ごとにラベルをつけると、どの導線からの読み取りか管理画面で確認できます
+                  </p>
+                </div>
+
                 {/* Image Upload */}
                 <div>
                   <label class="block text-sm font-semibold text-gray-700 mb-1.5">

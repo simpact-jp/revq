@@ -14,6 +14,7 @@ export type User = {
   email: string
   name: string | null
   plan: string
+  max_cards: number
   created_at: string
   last_login_at: string | null
 }
@@ -27,6 +28,7 @@ export type Card = {
   template: string
   image_key: string | null
   cta_text: string | null
+  label: string | null
   created_at: string
   status: string
 }
@@ -55,6 +57,7 @@ export type CreateCardRequest = {
   template?: string
   image_data?: string  // base64 data URI
   cta_text?: string    // custom CTA text for the card
+  label?: string       // card label e.g. "レジ横用", "壁面掲示用"
 }
 
 export type CardWithClicks = Card & {

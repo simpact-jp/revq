@@ -58,6 +58,7 @@ function initHomePage() {
   const previewImage = document.getElementById('preview-image')
   const removeImageBtn = document.getElementById('remove-image')
   const ctaTextInput = document.getElementById('cta-text-input')
+  const cardLabelInput = document.getElementById('card-label')
 
   let selectedTemplate = 0
   let selectedTemplateId = 'simple'
@@ -276,12 +277,14 @@ function initHomePage() {
 
       try {
         const ctaText = ctaTextInput ? ctaTextInput.value.trim() : ''
+        const cardLabel = cardLabelInput ? cardLabelInput.value.trim() : ''
         const payload = {
           google_url: googleUrlInput.value.trim(),
           store_name: storeNameInput ? storeNameInput.value.trim() : undefined,
           template: selectedTemplateId,
           image_data: uploadedImageData || undefined,
           cta_text: ctaText || undefined,
+          label: cardLabel || undefined,
         }
 
         const res = await fetch('/api/cards', {
@@ -301,6 +304,7 @@ function initHomePage() {
           code: data.card.short_code,
           url: data.card.short_url,
           name: data.card.store_name || '',
+          label: data.card.label || '',
         })
         window.location.href = `/done?${params.toString()}`
       } catch (err) {
@@ -599,20 +603,30 @@ async function initDashboardPage() {
 
     const cards = data.cards || []
 
+    const maxCards = data.max_cards || 2
+
     // Update stats
     if (statsContainer) {
       const totalCards = cards.length
       const totalClicks = cards.reduce((sum, c) => sum + (c.click_count || 0), 0)
       statsContainer.innerHTML = `
         <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
-          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">総カード数</p>
-          <p class="text-2xl sm:text-3xl font-bold text-gray-900">${totalCards}</p>
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">カード数</p>
+          <p class="text-2xl sm:text-3xl font-bold text-gray-900">${totalCards} <span class="text-sm font-normal text-gray-400">/ ${maxCards}</span></p>
         </div>
         <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
           <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">総クリック数</p>
           <p class="text-2xl sm:text-3xl font-bold text-brand-600">${totalClicks}</p>
         </div>
       `
+    }
+
+    // Show/hide "create new" button based on card limit
+    const createNewBtn = document.querySelector('a[href=\"/#create\"]')
+    if (createNewBtn && cards.length >= maxCards) {
+      createNewBtn.classList.add('opacity-50', 'pointer-events-none')
+      createNewBtn.title = `\u30ab\u30fc\u30c9\u4e0a\u9650\uff08${maxCards}\u679a\uff09\u306b\u9054\u3057\u3066\u3044\u307e\u3059`
+      createNewBtn.insertAdjacentHTML('afterend', `<span class="text-xs text-gray-400 ml-2">\u4e0a\u9650${maxCards}\u679a</span>`)
     }
 
     if (cards.length === 0) {
@@ -629,7 +643,8 @@ async function initDashboardPage() {
             <div class="flex items-start justify-between mb-4">
               <div>
                 <h3 class="font-bold text-gray-900 text-lg">${escapeHtml(card.store_name || '(店名なし)')}</h3>
-                <div class="flex items-center gap-2 mt-1">
+                <div class="flex items-center gap-2 mt-1 flex-wrap">
+                  ${card.label ? `<span class="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-medium"><i class="fas fa-tag mr-0.5 text-[10px]"></i>${escapeHtml(card.label)}</span>` : ''}
                   <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">${escapeHtml(card.template)}</span>
                   <span class="text-xs text-gray-400">${formatDate(card.created_at)}</span>
                 </div>
@@ -1037,7 +1052,10 @@ async function loadAdminCards() {
     if (tbody) {
       tbody.innerHTML = data.cards.map(c => `
         <tr class="hover:bg-gray-50 transition-colors">
-          <td class="px-5 py-3.5"><p class="font-semibold text-gray-800">${escapeHtml(c.store_name || '(店名なし)')}</p></td>
+          <td class="px-5 py-3.5">
+            <p class="font-semibold text-gray-800">${escapeHtml(c.store_name || '(店名なし)')}</p>
+            ${c.label ? `<p class="text-xs text-amber-600 mt-0.5"><i class="fas fa-tag mr-0.5"></i>${escapeHtml(c.label)}</p>` : ''}
+          </td>
           <td class="px-5 py-3.5"><code class="text-xs font-mono text-brand-600 bg-brand-50 px-2 py-0.5 rounded">${escapeHtml(c.short_url)}</code></td>
           <td class="px-5 py-3.5 text-gray-600">${escapeHtml(c.user_name || '未登録')}</td>
           <td class="px-5 py-3.5"><span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">${escapeHtml(c.template)}</span></td>

@@ -31,6 +31,18 @@ cards.post('/', async (c) => {
     return c.json({ error: 'GoogleマップのURLは必須です' }, 400)
   }
 
+  // Check card limit for logged-in users
+  const userId = await getUserId(c)
+  if (userId) {
+    const user = await c.env.DB.prepare('SELECT max_cards FROM users WHERE id = ?').bind(userId).first()
+    const maxCards = (user?.max_cards as number) || 2
+    const existing = await c.env.DB.prepare('SELECT COUNT(*) as count FROM cards WHERE user_id = ?').bind(userId).first()
+    const currentCount = (existing?.count as number) || 0
+    if (currentCount >= maxCards) {
+      return c.json({ error: `カードの作成上限（${maxCards}枚）に達しています。既存のカードを削除してからお試しください。` }, 400)
+    }
+  }
+
   // Generate unique short code
   let shortCode: string = ''
   let attempts = 0
@@ -42,15 +54,15 @@ cards.post('/', async (c) => {
     attempts++
   } while (attempts < 10)
 
-  const userId = await getUserId(c)
   const template = body.template || 'simple'
   const storeName = body.store_name || null
   const imageData = body.image_data || null
   const ctaText = body.cta_text || null
+  const label = body.label || null
 
   await c.env.DB.prepare(
-    'INSERT INTO cards (user_id, store_name, google_url, short_code, template, image_key, cta_text) VALUES (?, ?, ?, ?, ?, ?, ?)'
-  ).bind(userId, storeName, body.google_url, shortCode, template, imageData, ctaText).run()
+    'INSERT INTO cards (user_id, store_name, google_url, short_code, template, image_key, cta_text, label) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+  ).bind(userId, storeName, body.google_url, shortCode, template, imageData, ctaText, label).run()
 
   const card = await c.env.DB.prepare('SELECT * FROM cards WHERE short_code = ?')
     .bind(shortCode).first()
@@ -65,6 +77,7 @@ cards.post('/', async (c) => {
       short_code: card!.short_code,
       template: card!.template,
       cta_text: card!.cta_text,
+      label: card!.label,
       short_url: `${origin}/r/${shortCode}`,
       created_at: card!.created_at,
     },
@@ -82,7 +95,7 @@ cards.get('/', async (c) => {
   }
 
   const { results } = await c.env.DB.prepare(`
-    SELECT c.id, c.store_name, c.google_url, c.short_code, c.template, c.cta_text, c.created_at, c.status,
+    SELECT c.id, c.store_name, c.google_url, c.short_code, c.template, c.cta_text, c.label, c.created_at, c.status,
            COUNT(cl.id) as click_count
     FROM cards c
     LEFT JOIN clicks cl ON cl.card_id = c.id
@@ -97,7 +110,11 @@ cards.get('/', async (c) => {
     short_url: `${origin}/r/${card.short_code}`,
   }))
 
-  return c.json({ cards: cardsWithUrls })
+  // Return user's card limit info
+  const user = await c.env.DB.prepare('SELECT max_cards FROM users WHERE id = ?').bind(userId).first()
+  const maxCards = (user?.max_cards as number) || 2
+
+  return c.json({ cards: cardsWithUrls, max_cards: maxCards })
 })
 
 /**
@@ -132,6 +149,7 @@ cards.put('/:id', async (c) => {
     store_name?: string | null
     cta_text?: string | null
     template?: string
+    label?: string | null
   }>()
 
   const updates: string[] = []
@@ -148,6 +166,10 @@ cards.put('/:id', async (c) => {
   if (body.template !== undefined) {
     updates.push('template = ?')
     values.push(body.template)
+  }
+  if (body.label !== undefined) {
+    updates.push('label = ?')
+    values.push(body.label || null)
   }
 
   if (updates.length > 0) {
