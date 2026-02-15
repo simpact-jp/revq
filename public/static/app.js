@@ -1301,6 +1301,48 @@ async function initAdminPage() {
     })
   }
 
+  // --- Reset All Data button ---
+  const resetBtn = document.getElementById('btn-reset-all-data')
+  if (resetBtn) {
+    resetBtn.addEventListener('click', async () => {
+      // First confirmation
+      const ok1 = confirm('⚠️ 本当にすべてのデータを削除しますか？\n\nこの操作は取り消せません。\n・全ユーザー\n・全カード\n・全店舗\n・全クリック履歴\n・全フィードバック\n・全OTP履歴\nが完全に削除されます。')
+      if (!ok1) return
+
+      // Second confirmation with typed input
+      const typed = prompt('最終確認: 削除を実行するには「全データ削除」と入力してください。')
+      if (typed !== '全データ削除') {
+        alert('入力が一致しないため、削除をキャンセルしました。')
+        return
+      }
+
+      // Execute reset
+      resetBtn.disabled = true
+      resetBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>削除中…'
+      
+      try {
+        const res = await fetch('/api/admin/reset-all', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ confirm: 'DELETE_ALL_DATA' })
+        })
+        const data = await res.json()
+        
+        if (res.ok && data.success) {
+          alert('✅ 全データを削除しました。ページを再読み込みします。')
+          location.reload()
+        } else {
+          alert('❌ エラー: ' + (data.error || '削除に失敗しました'))
+        }
+      } catch (e) {
+        alert('❌ 通信エラー: データリセットに失敗しました')
+      } finally {
+        resetBtn.disabled = false
+        resetBtn.innerHTML = '<i class="fas fa-exclamation-triangle mr-1"></i>リセット'
+      }
+    })
+  }
+
   // --- Load real data ---
   loadAdminStats()
   loadAdminRecentActivity()

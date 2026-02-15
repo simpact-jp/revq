@@ -261,8 +261,8 @@ export const AdminPage = () => {
                   <p class="font-semibold text-gray-800 text-sm">全データをリセット</p>
                   <p class="text-xs text-gray-400">すべてのユーザー・カードデータを削除します（復元不可）</p>
                 </div>
-                <button type="button" class="px-4 py-2 bg-red-100 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-200 transition-colors">
-                  リセット
+                <button type="button" id="btn-reset-all-data" class="px-4 py-2 bg-red-100 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-200 transition-colors">
+                  <i class="fas fa-exclamation-triangle mr-1"></i>リセット
                 </button>
               </div>
             </div>

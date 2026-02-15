@@ -118,7 +118,8 @@ async function drawCard(
 ) {
   const { x, y, w, h, storeName, shortUrl, template, imageData, ctaText, font, fontBold, jpFont } = opts
   const color = TEMPLATE_COLORS[template] || TEMPLATE_COLORS.simple
-  const needsJpFont = (storeName && !isWinAnsiSafe(storeName)) || (ctaText && !isWinAnsiSafe(ctaText))
+  // Always assume Japanese may be needed (store name, CTA text, or default CTA)
+  const needsJpFont = true
 
   // Scale ratios based on standard card size 420x298
   const sx = w / 420
@@ -254,17 +255,6 @@ async function drawCard(
     }
   }
 
-  // ---- Short URL text ----
-  const urlSize = Math.max(5, 10 * Math.min(sx, sy))
-  const urlWidth = font.widthOfTextAtSize(shortUrl, urlSize)
-  page.drawText(shortUrl, {
-    x: x + (w - urlWidth) / 2,
-    y: qrY - 16 * sy,
-    size: urlSize,
-    font,
-    color: rgb(0.4, 0.4, 0.4),
-  })
-
   // ---- Footer branding ----
   const brandText = 'Powered by RevQ'
   const brandSize = Math.max(4, 7 * Math.min(sx, sy))
@@ -309,12 +299,10 @@ async function generateOriginalCardPDF(opts: GeneratePDFRequest): Promise<Uint8A
   const font = await doc.embedFont(StandardFonts.Helvetica)
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold)
 
-  const needsJp = (storeName && !isWinAnsiSafe(storeName)) || (ctaText && !isWinAnsiSafe(ctaText))
+  // Always load Japanese font (default CTA is Japanese)
   let jpFont = fontBold
-  if (needsJp) {
-    const loaded = await loadJapaneseFont(doc)
-    if (loaded) jpFont = loaded
-  }
+  const loaded = await loadJapaneseFont(doc)
+  if (loaded) jpFont = loaded
 
   const W = 420
   const H = 298
@@ -342,12 +330,10 @@ async function generateA4SinglePDF(opts: GeneratePDFRequest): Promise<Uint8Array
   const font = await doc.embedFont(StandardFonts.Helvetica)
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold)
 
-  const needsJp = (storeName && !isWinAnsiSafe(storeName)) || (ctaText && !isWinAnsiSafe(ctaText))
+  // Always load Japanese font (default CTA is Japanese)
   let jpFont = fontBold
-  if (needsJp) {
-    const loaded = await loadJapaneseFont(doc)
-    if (loaded) jpFont = loaded
-  }
+  const loaded = await loadJapaneseFont(doc)
+  if (loaded) jpFont = loaded
 
   // A4 LANDSCAPE: swap width/height (841.89 x 595.28 pt)
   const A4W = 841.89
@@ -409,12 +395,10 @@ async function generateA4MultiPDF(opts: GeneratePDFRequest): Promise<Uint8Array>
   const font = await doc.embedFont(StandardFonts.Helvetica)
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold)
 
-  const needsJp = (storeName && !isWinAnsiSafe(storeName)) || (ctaText && !isWinAnsiSafe(ctaText))
+  // Always load Japanese font (default CTA is Japanese)
   let jpFont = fontBold
-  if (needsJp) {
-    const loaded = await loadJapaneseFont(doc)
-    if (loaded) jpFont = loaded
-  }
+  const loaded = await loadJapaneseFont(doc)
+  if (loaded) jpFont = loaded
 
   // 4-split uses LANDSCAPE orientation, 2-split and 8-split use PORTRAIT
   const isLandscape = copies > 2 && copies <= 4

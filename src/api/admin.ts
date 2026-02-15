@@ -211,6 +211,33 @@ admin.delete('/feedbacks/:id', async (c) => {
 })
 
 /**
+ * POST /api/admin/reset-all
+ * Reset all user data (users, cards, stores, clicks, feedbacks, otps)
+ * Requires confirmation token in request body
+ */
+admin.post('/reset-all', async (c) => {
+  const body = await c.req.json<{ confirm: string }>()
+  if (body.confirm !== 'DELETE_ALL_DATA') {
+    return c.json({ error: '確認コードが一致しません' }, 400)
+  }
+
+  try {
+    // Delete in correct order respecting foreign key relationships
+    await c.env.DB.prepare('DELETE FROM feedbacks').run()
+    await c.env.DB.prepare('DELETE FROM clicks').run()
+    await c.env.DB.prepare('DELETE FROM cards').run()
+    await c.env.DB.prepare('DELETE FROM stores').run()
+    await c.env.DB.prepare('DELETE FROM otps').run()
+    await c.env.DB.prepare('DELETE FROM users').run()
+
+    return c.json({ success: true, message: '全データを削除しました' })
+  } catch (e: any) {
+    console.error('Reset all data failed:', e)
+    return c.json({ error: 'データリセットに失敗しました: ' + e.message }, 500)
+  }
+})
+
+/**
  * GET /api/admin/recent-activity
  */
 admin.get('/recent-activity', async (c) => {
