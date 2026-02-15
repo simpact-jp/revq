@@ -46,21 +46,35 @@ export const LoginPage = () => {
         <div id="login-step-code" class="hidden">
           <div class="space-y-4">
             {/* Email sent notification */}
-            <div id="otp-email-sent" class="hidden bg-green-50 border border-green-200 rounded-lg p-3">
-              <p class="text-sm text-green-700">
-                <i class="fas fa-envelope-open-text mr-1"></i>
-                <span id="sent-email-display">you@example.com</span> にコードを送信しました
-              </p>
-              <p class="text-xs text-green-600 mt-1">メールを確認して6桁のコードを入力してください（5分間有効）</p>
+            <div id="otp-email-sent" class="hidden bg-green-50 border border-green-200 rounded-xl p-4">
+              <div class="flex items-start gap-3">
+                <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <i class="fas fa-envelope-open-text text-green-600 text-sm"></i>
+                </div>
+                <div>
+                  <p class="text-sm font-semibold text-green-800">
+                    <span id="sent-email-display">you@example.com</span> にコードを送信しました
+                  </p>
+                  <p class="text-xs text-green-600 mt-1">メールを確認して6桁のコードを入力してください（5分間有効）</p>
+                  <p class="text-xs text-green-500 mt-1">
+                    <i class="fas fa-info-circle mr-0.5"></i>
+                    届かない場合は迷惑メールフォルダもご確認ください
+                  </p>
+                </div>
+              </div>
             </div>
 
-            {/* Fallback mode (no email service configured) */}
-            <div id="otp-fallback" class="hidden bg-amber-50 border border-amber-200 rounded-lg p-3">
-              <p class="text-xs text-amber-700 font-semibold mb-1">
-                <i class="fas fa-flask mr-1"></i>プロトタイプモード — メール未設定のため画面に表示
-              </p>
-              <p class="text-xs text-amber-600 mb-2">本番環境ではメールで届きます</p>
-              <p id="debug-code-display" class="text-2xl font-mono font-bold text-amber-800 tracking-[0.3em] text-center"></p>
+            {/* Email send error */}
+            <div id="otp-error" class="hidden bg-red-50 border border-red-200 rounded-xl p-4">
+              <div class="flex items-start gap-3">
+                <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <i class="fas fa-exclamation-triangle text-red-600 text-sm"></i>
+                </div>
+                <div>
+                  <p class="text-sm font-semibold text-red-800">メールの送信に失敗しました</p>
+                  <p class="text-xs text-red-600 mt-1">しばらく時間をおいてから再度お試しください</p>
+                </div>
+              </div>
             </div>
 
             <div>

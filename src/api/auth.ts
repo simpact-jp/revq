@@ -80,6 +80,14 @@ auth.post('/send-code', async (c) => {
     return c.json({ error: 'メールアドレスが無効です' }, 400)
   }
 
+  // Rate limiting: max 1 OTP per email per 60 seconds
+  const recentOtp = await c.env.DB.prepare(
+    "SELECT id FROM otps WHERE email = ? AND used = 0 AND created_at > datetime('now', '-60 seconds') LIMIT 1"
+  ).bind(email).first()
+  if (recentOtp) {
+    return c.json({ error: '前回の送信から60秒経過してから再送信してください' }, 429)
+  }
+
   const code = generateOTPCode()
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5 min
 
@@ -91,18 +99,20 @@ auth.post('/send-code', async (c) => {
   await c.env.DB.prepare('INSERT INTO otps (email, code, expires_at) VALUES (?, ?, ?)')
     .bind(email, code, expiresAt).run()
 
-  // Try to send via Resend
+  // Send OTP via Resend
   const emailSent = await sendOTPEmail(email, code, c.env.RESEND_API_KEY, c.env.OTP_FROM_EMAIL)
-  console.log(`[OTP] ${email} -> ${code} (email_sent: ${emailSent})`)
+  console.log(`[OTP] ${email} (email_sent: ${emailSent})`)
+
+  if (!emailSent) {
+    return c.json({
+      error: 'メールの送信に失敗しました。しばらく時間をおいてから再度お試しください。'
+    }, 500)
+  }
 
   return c.json({
     success: true,
-    message: emailSent
-      ? 'ワンタイムコードをメールで送信しました'
-      : 'コードを生成しました',
-    email_sent: emailSent,
-    // If email was not sent, show code in UI as fallback (prototype mode)
-    ...(!emailSent && { _debug_code: code }),
+    message: 'ワンタイムコードをメールで送信しました',
+    email_sent: true,
   })
 })
 

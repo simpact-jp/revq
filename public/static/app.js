@@ -445,13 +445,16 @@ function initLoginPage() {
   const emailInput = document.getElementById('login-email')
   const codeInput = document.getElementById('login-code')
   const sentEmailDisplay = document.getElementById('sent-email-display')
-  const debugCodeEl = document.getElementById('debug-code-display')
   const otpEmailSent = document.getElementById('otp-email-sent')
-  const otpFallback = document.getElementById('otp-fallback')
+  const otpError = document.getElementById('otp-error')
 
   let savedEmail = ''
 
   async function sendOTP(email) {
+    // Reset notification states
+    otpEmailSent.classList.add('hidden')
+    otpError.classList.add('hidden')
+
     const res = await fetch('/api/auth/send-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -459,7 +462,14 @@ function initLoginPage() {
     })
     const data = await res.json()
 
-    if (!res.ok) throw new Error(data.error || 'コード送信に失敗しました')
+    if (!res.ok) {
+      // Show error notification but stay on code step if already there
+      if (!stepCode.classList.contains('hidden')) {
+        otpError.classList.remove('hidden')
+        return
+      }
+      throw new Error(data.error || 'コード送信に失敗しました')
+    }
 
     savedEmail = email
     sentEmailDisplay.textContent = email
@@ -467,19 +477,9 @@ function initLoginPage() {
     stepCode.classList.remove('hidden')
     codeInput.focus()
 
-    // Show appropriate notification based on whether email was actually sent
-    if (data.email_sent) {
-      // Email was sent via Resend API
-      otpEmailSent.classList.remove('hidden')
-      otpFallback.classList.add('hidden')
-    } else {
-      // No email service — show debug code on screen
-      otpEmailSent.classList.add('hidden')
-      otpFallback.classList.remove('hidden')
-      if (data._debug_code && debugCodeEl) {
-        debugCodeEl.textContent = data._debug_code
-      }
-    }
+    // Show email sent notification
+    otpEmailSent.classList.remove('hidden')
+    otpError.classList.add('hidden')
   }
 
   if (btnSendCode) {
@@ -496,6 +496,7 @@ function initLoginPage() {
 
       try {
         await sendOTP(email)
+        startResendCooldown()
       } catch (err) {
         alert(err.message)
       } finally {
@@ -505,17 +506,36 @@ function initLoginPage() {
     })
   }
 
-  // Resend OTP
+  // Resend OTP with cooldown
+  let resendCooldown = false
+  function startResendCooldown() {
+    resendCooldown = true
+    let remaining = 60
+    btnResendCode.disabled = true
+    btnResendCode.innerHTML = `<i class="fas fa-clock mr-1"></i> 再送信（${remaining}秒）`
+    const timer = setInterval(() => {
+      remaining--
+      if (remaining <= 0) {
+        clearInterval(timer)
+        resendCooldown = false
+        btnResendCode.disabled = false
+        btnResendCode.innerHTML = '<i class="fas fa-redo mr-1"></i> 再送信'
+      } else {
+        btnResendCode.innerHTML = `<i class="fas fa-clock mr-1"></i> 再送信（${remaining}秒）`
+      }
+    }, 1000)
+  }
+
   if (btnResendCode) {
     btnResendCode.addEventListener('click', async () => {
-      if (!savedEmail) return
+      if (!savedEmail || resendCooldown) return
       btnResendCode.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> 送信中…'
       btnResendCode.disabled = true
       try {
         await sendOTP(savedEmail)
+        startResendCooldown()
       } catch (err) {
         alert(err.message)
-      } finally {
         btnResendCode.innerHTML = '<i class="fas fa-redo mr-1"></i> 再送信'
         btnResendCode.disabled = false
       }
@@ -529,7 +549,7 @@ function initLoginPage() {
       emailInput.focus()
       // Reset notifications
       otpEmailSent.classList.add('hidden')
-      otpFallback.classList.add('hidden')
+      otpError.classList.add('hidden')
     })
   }
 
@@ -1460,10 +1480,10 @@ async function loadAdminOtp() {
                 <i class="fas fa-exclamation-triangle text-amber-600 text-lg"></i>
               </div>
               <div>
-                <h4 class="font-bold text-amber-800">メール送信: 未設定（プロトタイプモード）</h4>
-                <p class="text-sm text-amber-600">RESEND_API_KEY が未設定のため、OTPコードは画面に表示されます。</p>
+                <h4 class="font-bold text-amber-800">メール送信: 未設定</h4>
+                <p class="text-sm text-amber-600">RESEND_API_KEY が未設定のため、OTPメール送信ができません。</p>
                 <p class="text-xs text-amber-500 mt-1">
-                  本番環境で有効にするには: <code class="bg-amber-100 px-1 rounded">wrangler pages secret put RESEND_API_KEY</code>
+                  設定方法: <code class="bg-amber-100 px-1 rounded">wrangler pages secret put RESEND_API_KEY</code>
                 </p>
               </div>
             </div>
