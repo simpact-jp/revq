@@ -10,5 +10,8 @@ export default defineConfig({
       adapter,
       entry: 'src/index.tsx'
     })
-  ]
+  ],
+  define: {
+    '__BUILD_VERSION__': JSON.stringify(Date.now().toString(36))
+  }
 })

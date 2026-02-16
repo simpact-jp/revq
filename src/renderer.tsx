@@ -1,7 +1,8 @@
 import { jsxRenderer } from 'hono/jsx-renderer'
 
-// Build version for cache busting — changes with each deployment
-const BUILD_VERSION = Date.now().toString(36)
+// Build version for cache busting — injected by Vite at build time
+declare const __BUILD_VERSION__: string
+const BUILD_VERSION = typeof __BUILD_VERSION__ !== 'undefined' ? __BUILD_VERSION__ : Date.now().toString(36)
 
 export const renderer = jsxRenderer(({ children, title }) => {
   const isAdmin = title?.toString().includes('運営管理')
