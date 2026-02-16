@@ -21,7 +21,7 @@ export const HomePage = () => {
         {/* Full background image */}
         <div class="absolute inset-0">
           <img
-            src="/static/images/hero-reviews.png"
+            src="/static/images/cover.jpg"
             alt="Google Map レビューイメージ"
             class="w-full h-full object-cover"
           />
@@ -180,7 +180,7 @@ export const HomePage = () => {
       <section id="gate-feature" class="relative text-white border-b border-gray-100 overflow-hidden">
         {/* Background image */}
         <div class="absolute inset-0">
-          <img src="/static/images/gate-bg.png" alt="" class="w-full h-full object-cover" />
+          <img src="/static/images/back.jpg" alt="" class="w-full h-full object-cover" />
           <div class="absolute inset-0 bg-gradient-to-br from-gray-900/85 via-gray-900/80 to-brand-900/85"></div>
         </div>
         <div class="relative max-w-6xl mx-auto px-4 sm:px-6 py-20 md:py-28">
@@ -449,62 +449,6 @@ export const HomePage = () => {
                 </div>
                 <p class="text-xs text-gray-200 leading-relaxed">施術後のリラックスした空間で、体験を共有。口コミが集客の要に。</p>
               </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================
-          HOW IT WORKS — 4 steps visual (with gate)
-      ============================================================ */}
-      <section class="bg-gray-50">
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 py-16 md:py-20">
-          <h2 class="text-center text-2xl md:text-3xl font-bold text-gray-900 mb-4">かんたん 4 ステップ</h2>
-          <p class="text-center text-gray-500 mb-12 max-w-lg mx-auto">カード作成からレビュー獲得まで、すべてがスムーズに</p>
-
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm text-center relative">
-              <div class="absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-8 bg-brand-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md">1</div>
-              <div class="mt-4 mb-4">
-                <div class="w-16 h-16 bg-brand-50 rounded-2xl flex items-center justify-center mx-auto">
-                  <i class="fas fa-link text-brand-500 text-2xl"></i>
-                </div>
-              </div>
-              <h3 class="font-bold text-gray-900 mb-1">URLを貼り付け</h3>
-              <p class="text-sm text-gray-500">GoogleマップのURLをコピペ</p>
-            </div>
-
-            <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm text-center relative">
-              <div class="absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-8 bg-brand-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md">2</div>
-              <div class="mt-4 mb-4">
-                <div class="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto">
-                  <i class="fas fa-swatchbook text-amber-500 text-2xl"></i>
-                </div>
-              </div>
-              <h3 class="font-bold text-gray-900 mb-1">デザイン選択＋印刷</h3>
-              <p class="text-sm text-gray-500">テンプレートを選んでPDF出力</p>
-            </div>
-
-            <div class="bg-white rounded-2xl p-6 border-2 border-amber-200 shadow-sm text-center relative bg-amber-50/30">
-              <div class="absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-8 bg-amber-500 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md">3</div>
-              <div class="mt-4 mb-4">
-                <div class="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto">
-                  <i class="fas fa-shield-alt text-amber-500 text-2xl"></i>
-                </div>
-              </div>
-              <h3 class="font-bold text-gray-900 mb-1">ゲートで振り分け</h3>
-              <p class="text-sm text-gray-500">満足→レビュー、不満→FB</p>
-            </div>
-
-            <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm text-center relative">
-              <div class="absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-8 bg-brand-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md">4</div>
-              <div class="mt-4 mb-4">
-                <div class="w-16 h-16 bg-green-50 rounded-2xl flex items-center justify-center mx-auto">
-                  <i class="fas fa-chart-line text-green-500 text-2xl"></i>
-                </div>
-              </div>
-              <h3 class="font-bold text-gray-900 mb-1">データ分析</h3>
-              <p class="text-sm text-gray-500">管理画面で効果を確認</p>
             </div>
           </div>
         </div>

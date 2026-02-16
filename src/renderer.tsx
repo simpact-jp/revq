@@ -126,7 +126,7 @@ export const renderer = jsxRenderer(({ children, title }) => {
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet" />
         <link href={`/static/style.css?v=${BUILD_VERSION}`} rel="stylesheet" />
-        <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232563eb'/><text x='16' y='22' font-family='system-ui,sans-serif' font-size='18' font-weight='bold' fill='white' text-anchor='middle'>Q</text></svg>" />
+        <link rel="icon" href="/static/images/logo.jpg" />
         <script dangerouslySetInnerHTML={{ __html: `
           tailwind.config = {
             theme: {
@@ -154,24 +154,21 @@ export const renderer = jsxRenderer(({ children, title }) => {
         {/* Header */}
         <header class={`sticky top-0 z-50 ${isAdmin ? 'bg-gray-900 border-b border-gray-700' : 'bg-white border-b border-gray-200'}`}>
           <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-            <a href={isAdmin ? '/admin' : '/'} class={`flex items-center gap-2.5 no-underline ${isAdmin ? 'text-white' : 'text-brand-600 hover:text-brand-700'} transition-colors`}>
-              <div class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
-                <span class="text-white font-extrabold text-sm">Q</span>
-              </div>
-              <span class={`font-bold text-lg tracking-tight ${isAdmin ? 'text-white' : ''}`}>RevQ</span>
+            <a href={isAdmin ? '/admin' : '/'} class="flex items-center gap-2.5 no-underline transition-opacity hover:opacity-80">
+              <img src="/static/images/logo.jpg" alt="RevQ" class={`h-7 w-auto ${isAdmin ? '' : 'invert'}`} />
               {isAdmin && <span class="text-xs bg-amber-500 text-white px-2 py-0.5 rounded-full font-semibold ml-1">Admin</span>}
             </a>
-            <nav class="flex items-center gap-3">
+            <nav class="flex items-center gap-1 sm:gap-3">
               {isAdmin ? (
                 <>
-                  <a href="/" class="text-sm text-gray-400 hover:text-white transition-colors px-3 py-2 no-underline">公開サイト</a>
+                  <a href="/" class="text-sm text-gray-400 hover:text-white transition-colors px-2 sm:px-3 py-2 no-underline">公開サイト</a>
                   <span class="text-sm text-gray-500 px-2 py-1">admin@revq.jp</span>
                 </>
               ) : (
                 <>
-                  <a href="/pricing" class="text-sm text-gray-500 hover:text-gray-800 transition-colors px-3 py-2 no-underline hidden sm:inline" id="nav-pricing">料金</a>
-                  <a href="/login" class="text-sm text-gray-500 hover:text-gray-800 transition-colors px-3 py-2 no-underline" id="nav-login">ログイン</a>
-                  <a href="/dashboard" class="text-sm bg-brand-600 text-white hover:bg-brand-700 transition-colors px-4 py-2 rounded-lg no-underline hidden" id="nav-dashboard">管理画面</a>
+                  <a href="/pricing" class="text-xs sm:text-sm text-gray-500 hover:text-gray-800 transition-colors px-2 sm:px-3 py-2 no-underline" id="nav-pricing">料金</a>
+                  <a href="/login" class="text-xs sm:text-sm text-gray-500 hover:text-gray-800 transition-colors px-2 sm:px-3 py-2 no-underline" id="nav-login">ログイン</a>
+                  <a href="/dashboard" class="text-xs sm:text-sm bg-brand-600 text-white hover:bg-brand-700 transition-colors px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg no-underline hidden" id="nav-dashboard">管理画面</a>
                 </>
               )}
             </nav>
