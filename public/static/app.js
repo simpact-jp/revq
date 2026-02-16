@@ -823,6 +823,8 @@ async function initDashboardPage() {
     const stores = data.stores || []
     const maxStores = data.max_stores || 2
     const maxCardsPerStore = data.max_cards_per_store || 2
+    const userPlan = data.plan || 'free'
+    const recentClicksLimit = data.recent_clicks_limit || 5
 
     // Update stats
     if (statsContainer) {
@@ -910,7 +912,7 @@ async function initDashboardPage() {
         const firstCard = storeCards[0] // for google_url reference
 
         return `
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden" data-store-id="${store.id}">
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-visible" data-store-id="${store.id}">
           <div class="p-5 sm:p-6">
             <!-- Store Header -->
             <div class="flex items-start justify-between mb-4">
@@ -934,7 +936,7 @@ async function initDashboardPage() {
             </div>
 
             <!-- QR Cards Table -->
-            <div class="border border-gray-200 rounded-xl overflow-hidden">
+            <div class="border border-gray-200 rounded-xl overflow-visible">
               ${storeCards.map((card, idx) => `
               <div class="qr-card-row ${idx > 0 ? 'border-t border-gray-100' : ''} p-4 hover:bg-gray-50/50 transition-colors" data-card-id="${card.id}">
                 <div class="flex items-start gap-3">
@@ -973,8 +975,28 @@ async function initDashboardPage() {
                         ${card.unread_feedback > 0 ? `<span class="bg-red-500 text-white px-1 py-0 rounded-full text-[9px] font-bold">${card.unread_feedback}</span>` : ''}
                       </button>
                       ` : ''}
-                      ${card.recent_clicks && card.recent_clicks.length > 0 ? `<span class="text-gray-400" title="最新の読み込み: ${formatDateTimeJST(card.recent_clicks[0])}"><i class="fas fa-clock text-[10px] mr-0.5"></i>${formatDateTimeJST(card.recent_clicks[0])}</span>` : ''}
+                      ${card.recent_clicks && card.recent_clicks.length > 0 ? `
+                      <button type="button" class="btn-toggle-clicks inline-flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600" data-card-id="${card.id}" title="読み込み履歴を表示">
+                        <i class="fas fa-clock text-[10px]"></i>${formatDateTimeJST(card.recent_clicks[0])}
+                        <span class="text-[9px] bg-gray-100 text-gray-500 px-1 py-0 rounded-full">${card.recent_clicks.length}件</span>
+                      </button>` : ''}
                     </div>
+                    <!-- Recent clicks list (hidden by default) -->
+                    ${card.recent_clicks && card.recent_clicks.length > 0 ? `
+                    <div class="clicks-history hidden mt-2 bg-gray-50 border border-gray-200 rounded-lg p-2 max-h-48 overflow-y-auto" data-card-id="${card.id}">
+                      <div class="flex items-center justify-between mb-1.5">
+                        <p class="text-[10px] font-bold text-gray-500"><i class="fas fa-history mr-0.5"></i>読み込み履歴（直近${recentClicksLimit}件）</p>
+                        <button type="button" class="btn-close-clicks text-[10px] text-gray-400 hover:text-gray-600" data-card-id="${card.id}"><i class="fas fa-times"></i></button>
+                      </div>
+                      ${card.recent_clicks.map((ts, i) => `
+                        <div class="flex items-center gap-2 text-[10px] ${i > 0 ? 'border-t border-gray-100 pt-1 mt-1' : ''}">
+                          <span class="text-gray-300 w-4 text-right">${i + 1}</span>
+                          <i class="fas fa-mouse-pointer text-gray-300 text-[8px]"></i>
+                          <span class="text-gray-600">${formatDateTimeJST(ts)}</span>
+                        </div>
+                      `).join('')}
+                    </div>
+                    ` : ''}
                     <!-- Feedbacks container (hidden) -->
                     <div class="feedbacks-container hidden mt-2" data-card-id="${card.id}"></div>
                   </div>
@@ -985,7 +1007,7 @@ async function initDashboardPage() {
                       <button type="button" class="btn-pdf-menu text-xs text-brand-600 hover:bg-brand-50 p-1.5 rounded-md transition-all" data-card-id="${card.id}" data-name="${escapeHtml(card.store_name || card.short_code)}" title="PDFダウンロード">
                         <i class="fas fa-download"></i>
                       </button>
-                      <div class="pdf-menu hidden absolute bottom-full right-0 mb-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 w-44" data-card-id="${card.id}">
+                      <div class="pdf-menu hidden absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-50 w-44" data-card-id="${card.id}">
                         <button type="button" class="btn-dl-pdf w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-brand-50 hover:text-brand-600 rounded-t-lg transition-colors" data-layout="a4-single" data-copies="1">
                           <i class="fas fa-expand mr-1.5"></i>A4 1枚（拡大）
                         </button>
@@ -1063,6 +1085,25 @@ async function initDashboardPage() {
 }
 
 function attachDashboardEvents(container) {
+  // Toggle recent clicks history
+  container.querySelectorAll('.btn-toggle-clicks').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cardId = btn.dataset.cardId
+      const historyEl = container.querySelector(`.clicks-history[data-card-id="${cardId}"]`)
+      if (!historyEl) return
+      historyEl.classList.toggle('hidden')
+    })
+  })
+
+  // Close clicks history
+  container.querySelectorAll('.btn-close-clicks').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cardId = btn.dataset.cardId
+      const historyEl = container.querySelector(`.clicks-history[data-card-id="${cardId}"]`)
+      if (historyEl) historyEl.classList.add('hidden')
+    })
+  })
+
   // Gate toggle (badge button style)
   container.querySelectorAll('.btn-toggle-gate').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -1230,7 +1271,7 @@ function attachDashboardEvents(container) {
       } catch { }
 
       if (menuBtn) {
-        menuBtn.innerHTML = '<i class="fas fa-download mr-1"></i>PDF <i class="fas fa-caret-down ml-1"></i>'
+        menuBtn.innerHTML = '<i class="fas fa-download"></i>'
         menuBtn.disabled = false
       }
     })

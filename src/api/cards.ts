@@ -151,12 +151,15 @@ cards.get('/', async (c) => {
     return c.json({ error: 'ログインが必要です' }, 401)
   }
 
-  // Get user limits
+  // Get user limits and plan
   const user = await c.env.DB.prepare(
-    'SELECT max_stores, max_cards_per_store, max_cards FROM users WHERE id = ?'
+    'SELECT max_stores, max_cards_per_store, max_cards, plan FROM users WHERE id = ?'
   ).bind(userId).first()
   const maxStores = (user?.max_stores as number) || 2
   const maxCardsPerStore = (user?.max_cards_per_store as number) || 2
+  const userPlan = (user?.plan as string) || 'free'
+  // Recent clicks limit: free=5, plus/pro=50
+  const recentClicksLimit = (userPlan === 'plus' || userPlan === 'pro') ? 50 : 5
 
   // Get all stores for this user
   const { results: stores } = await c.env.DB.prepare(
@@ -191,7 +194,7 @@ cards.get('/', async (c) => {
     }
   }
 
-  // Fetch recent clicks (latest 3) for each card
+  // Fetch recent clicks (free=5, plus/pro=50) for each card
   let recentClicksMap: Record<number, string[]> = {}
   if (cardIds.length > 0) {
     const placeholders = cardIds.map(() => '?').join(',')
@@ -201,7 +204,7 @@ cards.get('/', async (c) => {
                ROW_NUMBER() OVER (PARTITION BY card_id ORDER BY clicked_at DESC) as rn
         FROM clicks
         WHERE card_id IN (${placeholders})
-      ) WHERE rn <= 3
+      ) WHERE rn <= ${recentClicksLimit}
       ORDER BY card_id, clicked_at DESC
     `).bind(...cardIds).all()
 
@@ -227,6 +230,8 @@ cards.get('/', async (c) => {
     max_cards_per_store: maxCardsPerStore,
     // Keep backward compat
     max_cards: maxCardsPerStore,
+    plan: userPlan,
+    recent_clicks_limit: recentClicksLimit,
   })
 })
 
