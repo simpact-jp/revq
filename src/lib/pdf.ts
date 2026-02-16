@@ -144,51 +144,91 @@ async function drawCard(
   const barH = Math.max(4, 8 * sy)
   page.drawRectangle({ x, y: y + h - barH, width: w, height: barH, color: rgb(color.r, color.g, color.b) })
 
-  // ---- Content area ----
-  let currentY = y + h - barH - 30 * sy
+  // ---- Layout constants ----
+  const scale = Math.min(sx, sy)
+  const gap = Math.max(6, 12 * scale)      // uniform gap between elements
+  const footerH = (!hideBranding) ? Math.max(10, 20 * sy) : 0
+
+  // Card top/bottom boundaries for content area
+  const contentTop = y + h - barH - (18 * sy)  // below accent bar + top padding
+  const contentBottom = y + footerH + (6 * sy)  // above footer + bottom padding
+
+  // ---- Pre-calculate fixed element sizes ----
+  const ctaSize = Math.max(6, 11 * scale)
+  const defaultCtaJa = 'Googleレビューにご協力ください'
+  const displayCta = ctaText || defaultCtaJa
+  const ctaNeedsJp = !isWinAnsiSafe(displayCta)
+  const ctaFont = (ctaNeedsJp && jpFont) ? jpFont : font
+  const ctaLineH = ctaSize + gap  // CTA text height + gap below
+
+  // QR code default target
+  const defaultQrSize = 120 * scale
+  const qrMinSize = 60 * scale
+
+  // ---- Measure store name height ----
+  let nameHeight = 0
+  let nameSize = 0
+  let nameFont = jpFont || fontBold
+  if (storeName) {
+    nameSize = Math.max(8, (storeName.length > 15 ? 16 : 20) * scale)
+    nameHeight = nameSize + gap
+  }
+
+  // ---- Calculate available space for all elements ----
+  const totalAvailable = contentTop - contentBottom
+  const fixedHeight = nameHeight + ctaLineH + gap  // name + CTA + gaps around QR
+
+  // Space left for image + QR (they share the remaining area)
+  const flexibleSpace = totalAvailable - fixedHeight
+
+  // Split flexible space: image gets up to 35%, QR gets the rest (at least qrMinSize)
+  let imgMaxH = 0
+  let qrTargetSize = defaultQrSize
+  
+  if (imageData) {
+    // Reserve QR space first (at least min QR size + padding)
+    const qrReserved = Math.max(qrMinSize, Math.min(defaultQrSize, flexibleSpace * 0.55)) + gap
+    imgMaxH = Math.max(25 * scale, flexibleSpace - qrReserved)
+    qrTargetSize = Math.min(defaultQrSize, Math.max(qrMinSize, flexibleSpace - imgMaxH - gap))
+  } else {
+    qrTargetSize = Math.min(defaultQrSize, Math.max(qrMinSize, flexibleSpace - gap))
+  }
+
+  // ---- Draw elements top-to-bottom ----
+  let currentY = contentTop
 
   // ---- Store name (if provided) ----
   if (storeName) {
     try {
-      const nameSize = Math.max(8, (storeName.length > 15 ? 16 : 20) * Math.min(sx, sy))
-      // Always try Japanese font first (store names are typically in Japanese)
-      const nameFont = jpFont || fontBold
       const nameWidth = nameFont.widthOfTextAtSize(storeName, nameSize)
       page.drawText(storeName, {
         x: x + (w - nameWidth) / 2,
-        y: currentY,
+        y: currentY - nameSize,
         size: nameSize,
         font: nameFont,
         color: rgb(0.15, 0.15, 0.15),
       })
-      currentY -= 25 * sy
+      currentY -= nameHeight
     } catch (e) {
       console.error('Failed to draw store name:', e)
-      // Fallback: try with bold font (for ASCII store names)
       try {
-        const nameSize = Math.max(8, (storeName.length > 15 ? 16 : 20) * Math.min(sx, sy))
+        nameFont = fontBold
         const nameWidth = fontBold.widthOfTextAtSize(storeName, nameSize)
         page.drawText(storeName, {
           x: x + (w - nameWidth) / 2,
-          y: currentY,
+          y: currentY - nameSize,
           size: nameSize,
           font: fontBold,
           color: rgb(0.15, 0.15, 0.15),
         })
-        currentY -= 25 * sy
+        currentY -= nameHeight
       } catch (_) {
-        currentY -= 8 * sy
+        // skip store name entirely
       }
     }
   }
 
   // ---- Embed uploaded image if present ----
-  // Calculate remaining space for image + QR code to prevent overflow
-  // We need: image + gap + CTA(~18) + gap + QR(~120*scale) + gap + footer(~20)
-  const qrReserved = (120 + 18 + 20 + 30) * Math.min(sx, sy) // QR + CTA + footer + gaps
-  const footerH = (!hideBranding) ? Math.max(10, 20 * sy) : 0
-  const availableForImage = currentY - y - qrReserved - footerH
-
   if (imageData) {
     try {
       let embeddedImage
@@ -202,64 +242,52 @@ async function drawCard(
         embeddedImage = await doc.embedJpg(bytes)
       }
       
-      // Limit image size to available space (cap at 80*scale or remaining space)
-      const maxImgW = Math.min(80 * Math.min(sx, sy), w * 0.5)
-      const maxImgH = Math.min(80 * Math.min(sx, sy), Math.max(availableForImage, 30 * Math.min(sx, sy)))
-      const scaleFactor = Math.min(maxImgW / embeddedImage.width, maxImgH / embeddedImage.height)
-      const imgDims = embeddedImage.scale(scaleFactor)
+      // Constrain image dimensions
+      const maxImgW = w * 0.55
+      const scaleFactor = Math.min(maxImgW / embeddedImage.width, imgMaxH / embeddedImage.height)
+      const imgW = embeddedImage.width * scaleFactor
+      const imgH = embeddedImage.height * scaleFactor
+      
       page.drawImage(embeddedImage, {
-        x: x + (w - imgDims.width) / 2,
-        y: currentY - imgDims.height,
-        width: imgDims.width,
-        height: imgDims.height,
+        x: x + (w - imgW) / 2,
+        y: currentY - imgH,
+        width: imgW,
+        height: imgH,
       })
-      currentY -= imgDims.height + 8 * sy
+      currentY -= imgH + gap
     } catch (e) {
       console.error('Failed to embed image in PDF:', e)
     }
   }
 
   // ---- CTA text ----
-  const defaultCtaJa = 'Googleレビューにご協力ください'
-  const displayCta = ctaText || defaultCtaJa
-  const ctaNeedsJp = !isWinAnsiSafe(displayCta)
-  const ctaFont = (ctaNeedsJp && jpFont) ? jpFont : font
-  const ctaSize = Math.max(6, 11 * Math.min(sx, sy))
-  
   try {
     const ctaWidth = ctaFont.widthOfTextAtSize(displayCta, ctaSize)
     page.drawText(displayCta, {
       x: x + (w - ctaWidth) / 2,
-      y: currentY,
+      y: currentY - ctaSize,
       size: ctaSize,
       font: ctaFont,
       color: rgb(0.35, 0.35, 0.35),
     })
   } catch (e) {
     console.error('Failed to draw CTA text:', e)
-    // fallback: try with standard font if Japanese font failed
     try {
       const fallbackCta = 'Google Review'
       const fbWidth = font.widthOfTextAtSize(fallbackCta, ctaSize)
       page.drawText(fallbackCta, {
         x: x + (w - fbWidth) / 2,
-        y: currentY,
+        y: currentY - ctaSize,
         size: ctaSize,
         font,
         color: rgb(0.35, 0.35, 0.35),
       })
     } catch (_) { /* silently fail */ }
   }
-  currentY -= 18 * sy
+  currentY -= ctaLineH
 
   // ---- QR Code (drawn using matrix data directly) ----
   const { modules, size: moduleCount } = generateQRMatrix(shortUrl)
-  
-  // Calculate QR size that fits in remaining space
-  const footerSpace = (!hideBranding) ? Math.max(10, 20 * sy) : 0
-  const remainingH = currentY - y - footerSpace - 12 * sy // 12 = gap above & below
-  const defaultQrSize = 120 * Math.min(sx, sy)
-  const qrTargetSize = Math.min(defaultQrSize, Math.max(remainingH * 0.9, 60 * Math.min(sx, sy)))
   
   const quietZone = 4
   const totalModules = moduleCount + quietZone * 2
@@ -267,7 +295,9 @@ async function drawCard(
   const qrTotalSize = totalModules * moduleSize
   
   const qrX = x + (w - qrTotalSize) / 2
-  const qrY = Math.max(y + footerSpace + 4 * sy, currentY - qrTotalSize - 8 * sy)
+  // Center QR in remaining space between currentY and contentBottom
+  const qrRemainingSpace = currentY - contentBottom
+  const qrY = currentY - (qrRemainingSpace + qrTotalSize) / 2
 
   // White background with border for QR
   page.drawRectangle({
