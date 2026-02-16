@@ -11,6 +11,8 @@ export type Bindings = {
   STRIPE_SECRET_KEY?: string
   STRIPE_PUBLISHABLE_KEY?: string
   STRIPE_WEBHOOK_SECRET?: string
+  GEO_RESTRICT?: string  // 'true' to enable Japan-only restriction (default: 'true')
+  GEO_ALLOWED_COUNTRIES?: string // Comma-separated country codes (default: 'JP')
 }
 
 // DB row types

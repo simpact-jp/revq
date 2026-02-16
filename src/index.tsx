@@ -17,9 +17,16 @@ import adminRoutes from './api/admin'
 import feedbackRoutes from './api/feedback'
 import stripeRoutes from './api/stripe'
 import { sendWeeklyReports } from './lib/weekly-report'
+import { geoRestrict } from './lib/geo-restrict'
 import type { Bindings } from './lib/types'
 
 const app = new Hono<{ Bindings: Bindings }>()
+
+// ============ Geo-restriction (Japan-only) — MUST be first ============
+// Blocks non-JP access to user pages/APIs while exempting
+// Stripe webhooks, QR redirects, feedback, and static assets.
+// Disable via env: GEO_RESTRICT=false
+app.use('*', geoRestrict)
 
 /**
  * Helper: check if the request is to the short-link domain (revq.link)
