@@ -27,22 +27,30 @@ function isWinAnsiSafe(str: string): boolean {
   return true
 }
 
-// Google Fonts CDN URL for Noto Sans JP
-const NOTO_SANS_JP_URL_ALT = 'https://fonts.gstatic.com/s/notosansjp/v53/Kk3Fid6YPZ9YDA1hASNBIebIMNxwb4-DWQ.ttf'
+// Google Fonts CDN URL for Noto Sans JP (Regular 400)
+const NOTO_SANS_JP_URLS = [
+  'https://fonts.gstatic.com/s/notosansjp/v56/-F6jfjtqLzI2JPCgQBnw7HFyzSD-AsregP8VFBEj75s.ttf',
+  'https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-jp@latest/japanese-400-normal.ttf',
+]
 
 /**
- * Load Japanese font (cached per invocation)
+ * Load Japanese font — tries multiple CDN sources for resilience
  */
 async function loadJapaneseFont(doc: PDFDocument): Promise<any> {
-  try {
-    const fontRes = await fetch(NOTO_SANS_JP_URL_ALT)
-    if (fontRes.ok) {
-      const fontData = await fontRes.arrayBuffer()
-      return await doc.embedFont(fontData)
+  for (const url of NOTO_SANS_JP_URLS) {
+    try {
+      const fontRes = await fetch(url)
+      if (fontRes.ok) {
+        const fontData = await fontRes.arrayBuffer()
+        if (fontData.byteLength > 100000) { // Sanity check: font should be > 100KB
+          return await doc.embedFont(fontData)
+        }
+      }
+    } catch (e) {
+      console.error(`Failed to load font from ${url}:`, e)
     }
-  } catch (e) {
-    console.error('Failed to load Japanese font:', e)
   }
+  console.error('All Japanese font sources failed')
   return null
 }
 
@@ -119,8 +127,6 @@ async function drawCard(
 ) {
   const { x, y, w, h, storeName, shortUrl, template, imageData, ctaText, font, fontBold, jpFont, hideBranding } = opts
   const color = TEMPLATE_COLORS[template] || TEMPLATE_COLORS.simple
-  // Always assume Japanese may be needed (store name, CTA text, or default CTA)
-  const needsJpFont = true
 
   // Scale ratios based on standard card size 420x298
   const sx = w / 420
@@ -145,7 +151,8 @@ async function drawCard(
   if (storeName) {
     try {
       const nameSize = Math.max(8, (storeName.length > 15 ? 16 : 20) * Math.min(sx, sy))
-      const nameFont = needsJpFont && jpFont ? jpFont : fontBold
+      // Always try Japanese font first (store names are typically in Japanese)
+      const nameFont = jpFont || fontBold
       const nameWidth = nameFont.widthOfTextAtSize(storeName, nameSize)
       page.drawText(storeName, {
         x: x + (w - nameWidth) / 2,
@@ -157,11 +164,31 @@ async function drawCard(
       currentY -= 25 * sy
     } catch (e) {
       console.error('Failed to draw store name:', e)
-      currentY -= 8 * sy
+      // Fallback: try with bold font (for ASCII store names)
+      try {
+        const nameSize = Math.max(8, (storeName.length > 15 ? 16 : 20) * Math.min(sx, sy))
+        const nameWidth = fontBold.widthOfTextAtSize(storeName, nameSize)
+        page.drawText(storeName, {
+          x: x + (w - nameWidth) / 2,
+          y: currentY,
+          size: nameSize,
+          font: fontBold,
+          color: rgb(0.15, 0.15, 0.15),
+        })
+        currentY -= 25 * sy
+      } catch (_) {
+        currentY -= 8 * sy
+      }
     }
   }
 
   // ---- Embed uploaded image if present ----
+  // Calculate remaining space for image + QR code to prevent overflow
+  // We need: image + gap + CTA(~18) + gap + QR(~120*scale) + gap + footer(~20)
+  const qrReserved = (120 + 18 + 20 + 30) * Math.min(sx, sy) // QR + CTA + footer + gaps
+  const footerH = (!hideBranding) ? Math.max(10, 20 * sy) : 0
+  const availableForImage = currentY - y - qrReserved - footerH
+
   if (imageData) {
     try {
       let embeddedImage
@@ -175,8 +202,11 @@ async function drawCard(
         embeddedImage = await doc.embedJpg(bytes)
       }
       
-      const maxImgSize = 80 * Math.min(sx, sy)
-      const imgDims = embeddedImage.scale(Math.min(maxImgSize / embeddedImage.width, maxImgSize / embeddedImage.height))
+      // Limit image size to available space (cap at 80*scale or remaining space)
+      const maxImgW = Math.min(80 * Math.min(sx, sy), w * 0.5)
+      const maxImgH = Math.min(80 * Math.min(sx, sy), Math.max(availableForImage, 30 * Math.min(sx, sy)))
+      const scaleFactor = Math.min(maxImgW / embeddedImage.width, maxImgH / embeddedImage.height)
+      const imgDims = embeddedImage.scale(scaleFactor)
       page.drawImage(embeddedImage, {
         x: x + (w - imgDims.width) / 2,
         y: currentY - imgDims.height,
@@ -190,9 +220,8 @@ async function drawCard(
   }
 
   // ---- CTA text ----
-  const defaultCtaAscii = 'Please leave us a Google Review!'
   const defaultCtaJa = 'Googleレビューにご協力ください'
-  const displayCta = ctaText || (jpFont ? defaultCtaJa : defaultCtaAscii)
+  const displayCta = ctaText || defaultCtaJa
   const ctaNeedsJp = !isWinAnsiSafe(displayCta)
   const ctaFont = (ctaNeedsJp && jpFont) ? jpFont : font
   const ctaSize = Math.max(6, 11 * Math.min(sx, sy))
@@ -207,30 +236,38 @@ async function drawCard(
       color: rgb(0.35, 0.35, 0.35),
     })
   } catch (e) {
-    // fallback to ASCII
-    const fallback = 'Please leave us a Google Review!'
-    const fbWidth = font.widthOfTextAtSize(fallback, ctaSize)
-    page.drawText(fallback, {
-      x: x + (w - fbWidth) / 2,
-      y: currentY,
-      size: ctaSize,
-      font,
-      color: rgb(0.35, 0.35, 0.35),
-    })
+    console.error('Failed to draw CTA text:', e)
+    // fallback: try with standard font if Japanese font failed
+    try {
+      const fallbackCta = 'Google Review'
+      const fbWidth = font.widthOfTextAtSize(fallbackCta, ctaSize)
+      page.drawText(fallbackCta, {
+        x: x + (w - fbWidth) / 2,
+        y: currentY,
+        size: ctaSize,
+        font,
+        color: rgb(0.35, 0.35, 0.35),
+      })
+    } catch (_) { /* silently fail */ }
   }
   currentY -= 18 * sy
 
   // ---- QR Code (drawn using matrix data directly) ----
   const { modules, size: moduleCount } = generateQRMatrix(shortUrl)
   
-  const qrTargetSize = 120 * Math.min(sx, sy)
+  // Calculate QR size that fits in remaining space
+  const footerSpace = (!hideBranding) ? Math.max(10, 20 * sy) : 0
+  const remainingH = currentY - y - footerSpace - 12 * sy // 12 = gap above & below
+  const defaultQrSize = 120 * Math.min(sx, sy)
+  const qrTargetSize = Math.min(defaultQrSize, Math.max(remainingH * 0.9, 60 * Math.min(sx, sy)))
+  
   const quietZone = 4
   const totalModules = moduleCount + quietZone * 2
   const moduleSize = qrTargetSize / totalModules
   const qrTotalSize = totalModules * moduleSize
   
   const qrX = x + (w - qrTotalSize) / 2
-  const qrY = currentY - qrTotalSize - 8 * sy
+  const qrY = Math.max(y + footerSpace + 4 * sy, currentY - qrTotalSize - 8 * sy)
 
   // White background with border for QR
   page.drawRectangle({
@@ -303,9 +340,7 @@ async function generateOriginalCardPDF(opts: GeneratePDFRequest): Promise<Uint8A
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold)
 
   // Always load Japanese font (default CTA is Japanese)
-  let jpFont = fontBold
-  const loaded = await loadJapaneseFont(doc)
-  if (loaded) jpFont = loaded
+  const jpFont = await loadJapaneseFont(doc)
 
   const W = 420
   const H = 298
@@ -334,9 +369,7 @@ async function generateA4SinglePDF(opts: GeneratePDFRequest): Promise<Uint8Array
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold)
 
   // Always load Japanese font (default CTA is Japanese)
-  let jpFont = fontBold
-  const loaded = await loadJapaneseFont(doc)
-  if (loaded) jpFont = loaded
+  const jpFont = await loadJapaneseFont(doc)
 
   // A4 LANDSCAPE: swap width/height (841.89 x 595.28 pt)
   const A4W = 841.89
@@ -372,13 +405,21 @@ async function generateA4SinglePDF(opts: GeneratePDFRequest): Promise<Uint8Array
     font, fontBold, jpFont, hideBranding,
   })
 
-  // Print info header
+  // Print info header (Japanese)
   const infoSize = 7
-  const infoText = 'RevQ - A4 Landscape Print Layout (Cut along marks)'
-  page.drawText(infoText, {
-    x: 30, y: A4H - 25,
-    size: infoSize, font, color: rgb(0.7, 0.7, 0.7),
-  })
+  const infoJaText = 'RevQ - A4 印刷レイアウト（トンボに沿ってカットしてください）'
+  try {
+    const infoFont = jpFont || font
+    page.drawText(infoJaText, {
+      x: 30, y: A4H - 25,
+      size: infoSize, font: infoFont, color: rgb(0.7, 0.7, 0.7),
+    })
+  } catch (_) {
+    page.drawText('RevQ - A4 Print Layout', {
+      x: 30, y: A4H - 25,
+      size: infoSize, font, color: rgb(0.7, 0.7, 0.7),
+    })
+  }
 
   return await doc.save()
 }
@@ -399,9 +440,7 @@ async function generateA4MultiPDF(opts: GeneratePDFRequest): Promise<Uint8Array>
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold)
 
   // Always load Japanese font (default CTA is Japanese)
-  let jpFont = fontBold
-  const loaded = await loadJapaneseFont(doc)
-  if (loaded) jpFont = loaded
+  const jpFont = await loadJapaneseFont(doc)
 
   // 4-split uses LANDSCAPE orientation, 2-split and 8-split use PORTRAIT
   const isLandscape = copies > 2 && copies <= 4
@@ -442,15 +481,23 @@ async function generateA4MultiPDF(opts: GeneratePDFRequest): Promise<Uint8Array>
   const page = doc.addPage([A4W, A4H])
 
   // Layout label
-  const layoutLabel = copies <= 2 ? '2-split' : copies <= 4 ? '4-split (Landscape)' : '8-split'
+  const layoutLabel = copies <= 2 ? '2分割' : copies <= 4 ? '4分割' : '8分割'
 
-  // Print info header (ASCII only - no Japanese for WinAnsi compatibility)
+  // Print info header (Japanese)
   const infoSize = 7
-  const infoText = `RevQ - A4 ${isLandscape ? 'Landscape' : 'Portrait'} Print Layout (${layoutLabel}, ${copies} cards) - Cut along the marks`
-  page.drawText(infoText, {
-    x: margin, y: A4H - 20,
-    size: infoSize, font, color: rgb(0.7, 0.7, 0.7),
-  })
+  const infoJaText = `RevQ - A4 ${layoutLabel}（${copies}枚）- トンボに沿ってカットしてください`
+  try {
+    const infoFont = jpFont || font
+    page.drawText(infoJaText, {
+      x: margin, y: A4H - 20,
+      size: infoSize, font: infoFont, color: rgb(0.7, 0.7, 0.7),
+    })
+  } catch (_) {
+    page.drawText(`RevQ - A4 (${copies} cards)`, {
+      x: margin, y: A4H - 20,
+      size: infoSize, font, color: rgb(0.7, 0.7, 0.7),
+    })
+  }
 
   let cardIdx = 0
   for (let r = 0; r < rows && cardIdx < copies; r++) {
