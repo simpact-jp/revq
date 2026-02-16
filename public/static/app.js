@@ -982,9 +982,30 @@ async function initDashboardPage() {
                 <a href="/api/cards/${card.id}/qr" target="_blank" class="text-xs font-semibold text-gray-500 border border-gray-200 hover:bg-gray-50 px-3 py-2 rounded-lg transition-all text-center no-underline">
                   <i class="fas fa-qrcode mr-1"></i>QR
                 </a>
+                <button type="button" class="btn-add-card-same-store text-xs font-semibold text-green-600 border border-green-200 hover:bg-green-50 px-3 py-2 rounded-lg transition-all" data-google-url="${escapeHtml(card.google_url || '')}" data-store-name="${escapeHtml(card.store_name || '')}" data-store-id="${card.store_id || ''}" title="この店舗にQRカードを追加">
+                  <i class="fas fa-plus mr-1"></i>QR追加
+                </button>
                 <button type="button" class="btn-delete-card text-xs font-semibold text-red-400 border border-red-100 hover:bg-red-50 px-3 py-2 rounded-lg transition-all" data-card-id="${card.id}" data-name="${escapeHtml(card.store_name || card.short_code)}">
                   <i class="fas fa-trash"></i>
                 </button>
+              </div>
+            </div>
+
+            <!-- Add Card Form (hidden) -->
+            <div class="add-card-form hidden mt-4 bg-green-50/50 border border-green-200 rounded-xl p-4" data-store-id="${card.store_id || ''}">
+              <p class="text-xs font-bold text-green-800 mb-3">
+                <i class="fas fa-plus-circle mr-1"></i>この店舗にQRカードを追加
+              </p>
+              <div class="space-y-2">
+                <input type="text" class="add-card-label w-full text-sm border border-green-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:border-green-400 outline-none" placeholder="ラベル（例: テーブル用、レジ横用）" maxlength="50">
+                <div class="flex gap-2">
+                  <button type="button" class="btn-confirm-add-card flex-1 text-xs font-bold text-white bg-green-600 hover:bg-green-700 px-4 py-2.5 rounded-lg transition-all" data-google-url="${escapeHtml(card.google_url || '')}" data-store-name="${escapeHtml(card.store_name || '')}">
+                    <i class="fas fa-check mr-1"></i>作成
+                  </button>
+                  <button type="button" class="btn-cancel-add-card text-xs font-semibold text-gray-500 border border-gray-300 hover:bg-gray-50 px-4 py-2.5 rounded-lg transition-all">
+                    キャンセル
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1215,6 +1236,96 @@ function attachDashboardEvents(container) {
           if (cardEl) cardEl.remove()
         }
       } catch { }
+    })
+  })
+
+  // Add card to same store — toggle form
+  container.querySelectorAll('.btn-add-card-same-store').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cardWrapper = btn.closest('[data-card-id]')
+      if (!cardWrapper) return
+      const form = cardWrapper.querySelector('.add-card-form')
+      if (!form) return
+
+      // Hide all other add-card forms first
+      container.querySelectorAll('.add-card-form').forEach(f => {
+        if (f !== form) f.classList.add('hidden')
+      })
+
+      form.classList.toggle('hidden')
+      if (!form.classList.contains('hidden')) {
+        const labelInput = form.querySelector('.add-card-label')
+        if (labelInput) labelInput.focus()
+      }
+    })
+  })
+
+  // Cancel add card
+  container.querySelectorAll('.btn-cancel-add-card').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const form = btn.closest('.add-card-form')
+      if (form) {
+        form.classList.add('hidden')
+        const labelInput = form.querySelector('.add-card-label')
+        if (labelInput) labelInput.value = ''
+      }
+    })
+  })
+
+  // Confirm add card — create a new card for the same store
+  container.querySelectorAll('.btn-confirm-add-card').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const googleUrl = btn.dataset.googleUrl
+      const storeName = btn.dataset.storeName
+      const form = btn.closest('.add-card-form')
+      const labelInput = form ? form.querySelector('.add-card-label') : null
+      const label = labelInput ? labelInput.value.trim() : ''
+
+      if (!googleUrl) {
+        alert('店舗のGoogle URLが見つかりません')
+        return
+      }
+
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>作成中…'
+      btn.disabled = true
+
+      try {
+        const payload = {
+          google_url: googleUrl,
+          store_name: storeName || undefined,
+          template: 'simple',
+          label: label || undefined,
+        }
+
+        const res = await fetch('/api/cards', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+
+        const data = await res.json()
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'カード作成に失敗しました')
+        }
+
+        // Reload dashboard to show the new card
+        initDashboardPage()
+      } catch (err) {
+        alert(err.message || 'エラーが発生しました')
+        btn.innerHTML = '<i class="fas fa-check mr-1"></i>作成'
+        btn.disabled = false
+      }
+    })
+  })
+
+  // Enter key on add-card label input
+  container.querySelectorAll('.add-card-label').forEach(input => {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const form = input.closest('.add-card-form')
+        const confirmBtn = form ? form.querySelector('.btn-confirm-add-card') : null
+        if (confirmBtn) confirmBtn.click()
+      }
     })
   })
 }
@@ -1938,7 +2049,7 @@ async function renderPlanStatus(user) {
             <p class="text-sm text-blue-100">
               次回更新日: ${expiresText}
               <span class="mx-2">•</span>
-              店芗2０件・QR無制限
+              店舗20件・QR無制限
             </p>
           </div>
           <button type="button" id="btn-manage-subscription" class="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-all">
@@ -2030,29 +2141,57 @@ function escapeHtml(str) {
 }
 
 /**
- * Convert a UTC date string from DB to JST Date object
+ * Format a date string as JST using Intl API (timezone-safe, works in any browser timezone)
  */
-function toJST(dateStr) {
-  if (!dateStr) return null
-  try {
-    const utc = dateStr.endsWith('Z') ? dateStr : dateStr + 'Z'
-    return new Date(new Date(utc).getTime() + 9 * 60 * 60 * 1000)
-  } catch { return null }
-}
-
 function formatDate(dateStr) {
-  const d = toJST(dateStr)
-  if (!d) return '-'
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+  if (!dateStr) return '-'
+  try {
+    // Treat DB datetime strings (without Z) as UTC
+    const utc = dateStr.endsWith('Z') ? dateStr : dateStr.replace(' ', 'T') + 'Z'
+    const d = new Date(utc)
+    if (isNaN(d.getTime()) || d.getFullYear() <= 1970) return '-'
+    // Format in JST using Intl
+    const parts = new Intl.DateTimeFormat('ja-JP', {
+      timeZone: 'Asia/Tokyo',
+      year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(d)
+    const y = parts.find(p => p.type === 'year').value
+    const m = parts.find(p => p.type === 'month').value
+    const day = parts.find(p => p.type === 'day').value
+    return `${y}-${m}-${day}`
+  } catch { return '-' }
 }
 
 function formatDateTime(dateStr) {
-  const d = toJST(dateStr)
-  if (!d) return '-'
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+  if (!dateStr) return '-'
+  try {
+    const utc = dateStr.endsWith('Z') ? dateStr : dateStr.replace(' ', 'T') + 'Z'
+    const d = new Date(utc)
+    if (isNaN(d.getTime()) || d.getFullYear() <= 1970) return '-'
+    const parts = new Intl.DateTimeFormat('ja-JP', {
+      timeZone: 'Asia/Tokyo',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: false
+    }).formatToParts(d)
+    const y = parts.find(p => p.type === 'year').value
+    const m = parts.find(p => p.type === 'month').value
+    const day = parts.find(p => p.type === 'day').value
+    const h = parts.find(p => p.type === 'hour').value
+    const min = parts.find(p => p.type === 'minute').value
+    return `${y}-${m}-${day} ${h}:${min}`
+  } catch { return '-' }
 }
 
 // Alias — all date functions now use JST
 function formatDateTimeJST(dateStr) {
   return formatDateTime(dateStr)
+}
+
+// Kept for backwards compat
+function toJST(dateStr) {
+  if (!dateStr) return null
+  try {
+    const utc = dateStr.endsWith('Z') ? dateStr : dateStr.replace(' ', 'T') + 'Z'
+    return new Date(utc)
+  } catch { return null }
 }
