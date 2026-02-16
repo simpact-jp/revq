@@ -34,7 +34,7 @@ export const renderer = jsxRenderer(({ children, title }) => {
         price: '300',
         priceCurrency: 'JPY',
         name: 'Plusプラン（月額）',
-        description: 'Plusプラン：店舗20件・QR無制限・フィードバック通知メール・RevQロゴ非表示'
+        description: 'Plusプラン：店舗20件・各店舗QR10枚・フィードバック通知メール・RevQロゴ非表示'
       }
     ],
     aggregateRating: {
@@ -55,7 +55,7 @@ export const renderer = jsxRenderer(({ children, title }) => {
         name: 'RevQは無料で使えますか？',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'はい、RevQは完全無料でご利用いただけます。無料プランでは店舗3件、各店舗2枚のQRコードを作成できます。'
+          text: 'はい、RevQは完全無料でご利用いただけます。無料プランでは店舗2件、各店舗2枚のQRコードを作成できます。'
         }
       },
       {

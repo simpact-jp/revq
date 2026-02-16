@@ -104,7 +104,7 @@ export const PricingPage = () => {
                 </li>
                 <li class="flex items-start gap-3 text-sm text-gray-600">
                   <i class="fas fa-check text-brand-500 mt-0.5 flex-shrink-0"></i>
-                  <span>QRカード <strong class="text-brand-600">無制限</strong></span>
+                  <span>QRカード 各店舗<strong class="text-brand-600">10枚</strong>まで</span>
                 </li>
                 <li class="flex items-start gap-3 text-sm text-gray-600">
                   <i class="fas fa-check text-brand-500 mt-0.5 flex-shrink-0"></i>
@@ -164,7 +164,7 @@ export const PricingPage = () => {
                 <tr>
                   <td class="px-6 py-3.5 text-sm text-gray-700">QRカード（各店舗）</td>
                   <td class="px-4 py-3.5 text-center text-sm text-gray-600">2枚</td>
-                  <td class="px-4 py-3.5 text-center text-sm font-bold text-brand-600 bg-brand-50/30">無制限</td>
+                  <td class="px-4 py-3.5 text-center text-sm font-bold text-brand-600 bg-brand-50/30">10枚</td>
                 </tr>
                 <tr>
                   <td class="px-6 py-3.5 text-sm text-gray-700">デザインテンプレート</td>

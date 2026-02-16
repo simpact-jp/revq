@@ -12,7 +12,7 @@ const PRICE_IDS = {
 // Plus plan limits
 const PLUS_LIMITS = {
   max_stores: 20,
-  max_cards_per_store: 999,
+  max_cards_per_store: 10,
   max_cards: 999,
 }
 
@@ -77,7 +77,7 @@ async function sendThankYouEmail(
       <p style="color:#334155;font-size:15px;line-height:1.7;margin:0 0 8px;font-weight:600;">Plus プランの特典：</p>
       <ul style="color:#475569;font-size:14px;line-height:2;margin:0 0 24px;padding-left:20px;">
         <li>店舗登録 <strong>20件</strong>まで</li>
-        <li>QRカード <strong>無制限</strong>作成</li>
+        <li>QRカード 各店舗<strong>10枚</strong>まで作成</li>
         <li>PDF の RevQ ロゴ非表示</li>
         <li>週刊レポートメール</li>
       </ul>
@@ -329,7 +329,7 @@ stripe.post('/webhook', async (c) => {
             max_cards = 2
           WHERE id = ?
         `).bind(userId).run()
-        console.log(`[Stripe] User ${userId} downgraded to free`)
+        console.log(`[Stripe] User ${userId} downgraded to free (max 2 cards/store)`)
       }
       break
     }
@@ -353,6 +353,7 @@ stripe.post('/webhook', async (c) => {
               max_stores = 2, max_cards_per_store = 2, max_cards = 2
             WHERE id = ?
           `).bind(userId).run()
+          console.log(`[Stripe] User ${userId} subscription canceled/unpaid, downgraded to free (max 2 cards/store)`)
         }
       }
       break

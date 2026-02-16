@@ -533,7 +533,7 @@ function initLoginPage() {
       : '無料でアカウントを作成します'
     authInfoText.innerHTML = isLogin
       ? '<i class="fas fa-shield-alt mr-1"></i>パスワード不要。毎回メールで届くコードでログインします。'
-      : '<i class="fas fa-gift mr-1"></i>無料プラン: 店舗3件、QRコード各2枚まで。登録後すぐに使えます。'
+      : '<i class="fas fa-gift mr-1"></i>無料プラン: 店舗2件、QRコード各2枚まで。登録後すぐに使えます。'
     if (btnLoginLabel) {
       btnLoginLabel.textContent = isLogin ? 'ログイン' : '登録する'
     }
@@ -871,135 +871,156 @@ async function initDashboardPage() {
       return
     }
 
-    // Render cards
+    // --- Group cards by store ---
     if (cardsContainer) {
-      cardsContainer.innerHTML = cards.map(card => `
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden" data-card-id="${card.id}">
+      // Build store groups: { storeId -> { store info, cards[] } }
+      const storeMap = {}
+      stores.forEach(s => {
+        storeMap[s.id] = { id: s.id, name: s.name, google_url: s.google_url, created_at: s.created_at, cards: [] }
+      })
+      // Also group cards with no store (orphan, shouldn't happen normally)
+      cards.forEach(card => {
+        const sid = card.store_id
+        if (sid && storeMap[sid]) {
+          storeMap[sid].cards.push(card)
+        } else {
+          // Fallback: create a pseudo-store group for this card
+          const key = 'no-store-' + card.id
+          if (!storeMap[key]) {
+            storeMap[key] = { id: key, name: card.store_name || '(店名なし)', google_url: card.google_url || '', created_at: card.created_at, cards: [] }
+          }
+          storeMap[key].cards.push(card)
+        }
+      })
+
+      const storeGroups = Object.values(storeMap).filter(g => g.cards.length > 0)
+      // Sort stores by most-recent card creation
+      storeGroups.sort((a, b) => {
+        const aMax = Math.max(...a.cards.map(c => new Date(c.created_at).getTime()))
+        const bMax = Math.max(...b.cards.map(c => new Date(c.created_at).getTime()))
+        return bMax - aMax
+      })
+
+      cardsContainer.innerHTML = storeGroups.map(store => {
+        const storeCards = store.cards
+        const storeTotalClicks = storeCards.reduce((sum, c) => sum + (c.click_count || 0), 0)
+        const storeTotalFeedbacks = storeCards.reduce((sum, c) => sum + (c.feedback_count || 0), 0)
+        const storeUnreadFeedbacks = storeCards.reduce((sum, c) => sum + (c.unread_feedback || 0), 0)
+        const canAddMore = storeCards.length < maxCardsPerStore
+        const firstCard = storeCards[0] // for google_url reference
+
+        return `
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden" data-store-id="${store.id}">
           <div class="p-5 sm:p-6">
+            <!-- Store Header -->
             <div class="flex items-start justify-between mb-4">
               <div>
-                <h3 class="font-bold text-gray-900 text-lg">${escapeHtml(card.store_name || '(店名なし)')}</h3>
-                <div class="flex items-center gap-2 mt-1 flex-wrap">
-                  ${card.label ? `<span class="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-medium"><i class="fas fa-tag mr-0.5 text-[10px]"></i>${escapeHtml(card.label)}</span>` : ''}
-                  <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">${escapeHtml(card.template)}</span>
-                  <span class="text-xs text-gray-400">${formatDate(card.created_at)}</span>
+                <h3 class="font-bold text-gray-900 text-lg"><i class="fas fa-store text-brand-500 mr-1.5 text-base"></i>${escapeHtml(store.name || '(店名なし)')}</h3>
+                <div class="flex items-center gap-3 mt-1.5 text-xs text-gray-400">
+                  <span><i class="fas fa-qrcode mr-0.5"></i>QR ${storeCards.length}枚 / ${maxCardsPerStore}枚</span>
+                  <span><i class="fas fa-mouse-pointer mr-0.5"></i>${storeTotalClicks}クリック</span>
+                  ${storeTotalFeedbacks > 0 ? `<span><i class="fas fa-comment-dots mr-0.5"></i>${storeTotalFeedbacks}件${storeUnreadFeedbacks > 0 ? ` <span class="text-[10px] bg-red-500 text-white px-1 py-0.5 rounded-full font-bold">${storeUnreadFeedbacks}未読</span>` : ''}</span>` : ''}
                 </div>
               </div>
-              <div class="text-right">
-                <p class="text-2xl font-bold text-brand-600">${card.click_count || 0}</p>
-                <p class="text-[10px] text-gray-400 uppercase tracking-wider">クリック</p>
-              </div>
-            </div>
-
-            <!-- Gate Toggle -->
-            <div class="flex items-center justify-between bg-gradient-to-r ${card.gate_enabled ? 'from-green-50 to-emerald-50 border-green-200' : 'from-gray-50 to-gray-50 border-gray-200'} border rounded-lg p-3 mb-4 transition-all">
               <div class="flex items-center gap-2">
-                <i class="fas fa-shield-alt ${card.gate_enabled ? 'text-green-600' : 'text-gray-400'} text-sm"></i>
-                <div>
-                  <p class="text-xs font-semibold ${card.gate_enabled ? 'text-green-800' : 'text-gray-600'}">満足/不満ゲート</p>
-                  <p class="text-[10px] ${card.gate_enabled ? 'text-green-600' : 'text-gray-400'}">
-                    ${card.gate_enabled ? 'ON — 満足→Googleレビュー / 不満→フォーム' : 'OFF — 直接Googleレビューへ'}
-                  </p>
-                </div>
-              </div>
-              <button type="button" class="btn-toggle-gate relative w-11 h-6 rounded-full transition-all ${card.gate_enabled ? 'bg-green-500' : 'bg-gray-300'}" data-card-id="${card.id}" data-enabled="${card.gate_enabled ? '1' : '0'}">
-                <span class="absolute top-0.5 ${card.gate_enabled ? 'left-[calc(100%-1.375rem)]' : 'left-0.5'} w-5 h-5 bg-white rounded-full shadow-sm transition-all"></span>
-              </button>
-            </div>
-
-            <!-- Feedback Badge + Viewer -->
-            ${card.gate_enabled ? `
-            <div class="mb-4">
-              <div class="flex items-center justify-between mb-2">
-                <div class="flex items-center gap-2">
-                  <i class="fas fa-comment-dots text-amber-500 text-sm"></i>
-                  <span class="text-xs font-semibold text-gray-600">フィードバック</span>
-                  ${card.feedback_count > 0 ? `<span class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-bold">${card.feedback_count}件</span>` : ''}
-                  ${card.unread_feedback > 0 ? `<span class="text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded-full font-bold animate-pulse">${card.unread_feedback}件未読</span>` : ''}
-                </div>
-                ${card.feedback_count > 0 ? `
-                <button type="button" class="btn-view-feedbacks text-xs text-brand-600 hover:text-brand-700 font-semibold" data-card-id="${card.id}">
-                  <i class="fas fa-eye mr-0.5"></i>表示
-                </button>
-                ` : ''}
-              </div>
-              <div class="feedbacks-container hidden" data-card-id="${card.id}"></div>
-            </div>
-            ` : ''}
-
-            <div class="flex items-center gap-2 bg-gray-50 rounded-lg p-3 mb-4">
-              <i class="fas fa-link text-gray-400 text-sm"></i>
-              <code class="text-sm font-mono text-brand-600 flex-1 truncate">${escapeHtml(card.short_url)}</code>
-              <button type="button" class="copy-url-btn p-1.5 text-gray-400 hover:text-brand-600 hover:bg-brand-50 rounded-md transition-all" data-url="${escapeHtml(card.short_url)}" title="URLをコピー">
-                <i class="fas fa-copy"></i>
-              </button>
-            </div>
-            ${card.recent_clicks && card.recent_clicks.length > 0 ? `
-            <div class="mb-4 bg-blue-50/50 border border-blue-100 rounded-lg p-3">
-              <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                <i class="fas fa-clock mr-1"></i>直近の読み込み
-              </p>
-              <div class="space-y-1">
-                ${card.recent_clicks.map((dt, i) => `
-                  <div class="flex items-center gap-2 text-xs">
-                    <span class="w-4 h-4 rounded-full ${i === 0 ? 'bg-brand-100 text-brand-600' : 'bg-gray-100 text-gray-400'} flex items-center justify-center text-[10px] font-bold flex-shrink-0">${i + 1}</span>
-                    <span class="font-mono ${i === 0 ? 'text-gray-800 font-semibold' : 'text-gray-500'}">${formatDateTimeJST(dt)}</span>
-                  </div>
-                `).join('')}
-              </div>
-            </div>
-            ` : `
-            <div class="mb-4 bg-gray-50 border border-gray-100 rounded-lg p-3">
-              <p class="text-xs text-gray-400 text-center"><i class="fas fa-clock mr-1"></i>まだ読み込みがありません</p>
-            </div>
-            `}
-            <div class="flex items-center gap-4">
-              <div class="flex-shrink-0 bg-white border border-gray-200 rounded-lg p-2 qr-mini" data-card-id="${card.id}">
-                <div class="w-14 h-14 flex items-center justify-center text-gray-300">
-                  <i class="fas fa-qrcode text-2xl"></i>
-                </div>
-              </div>
-              <div class="flex gap-2 flex-1 flex-wrap">
-                <div class="relative">
-                  <button type="button" class="btn-pdf-menu text-xs font-semibold text-brand-600 border border-brand-200 hover:bg-brand-50 px-3 py-2 rounded-lg transition-all" data-card-id="${card.id}" data-name="${escapeHtml(card.store_name || card.short_code)}">
-                    <i class="fas fa-download mr-1"></i>PDF <i class="fas fa-caret-down ml-1"></i>
-                  </button>
-                  <div class="pdf-menu hidden absolute bottom-full left-0 mb-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 w-44" data-card-id="${card.id}">
-                    <button type="button" class="btn-dl-pdf w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-brand-50 hover:text-brand-600 rounded-t-lg transition-colors" data-layout="a4-single" data-copies="1">
-                      <i class="fas fa-expand mr-1.5"></i>A4 1枚（拡大）
-                    </button>
-                    <button type="button" class="btn-dl-pdf w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-brand-50 hover:text-brand-600 transition-colors" data-layout="a4-multi" data-copies="2">
-                      <i class="fas fa-columns mr-1.5"></i>A4 2分割
-                    </button>
-                    <button type="button" class="btn-dl-pdf w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-brand-50 hover:text-brand-600 transition-colors" data-layout="a4-multi" data-copies="4">
-                      <i class="fas fa-th-large mr-1.5"></i>A4 4分割
-                    </button>
-                    <button type="button" class="btn-dl-pdf w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-brand-50 hover:text-brand-600 rounded-b-lg transition-colors" data-layout="a4-multi" data-copies="8">
-                      <i class="fas fa-th mr-1.5"></i>A4 8分割
-                    </button>
-                  </div>
-                </div>
-                <a href="/api/cards/${card.id}/qr" target="_blank" class="text-xs font-semibold text-gray-500 border border-gray-200 hover:bg-gray-50 px-3 py-2 rounded-lg transition-all text-center no-underline">
-                  <i class="fas fa-qrcode mr-1"></i>QR
-                </a>
-                <button type="button" class="btn-add-card-same-store text-xs font-semibold text-green-600 border border-green-200 hover:bg-green-50 px-3 py-2 rounded-lg transition-all" data-google-url="${escapeHtml(card.google_url || '')}" data-store-name="${escapeHtml(card.store_name || '')}" data-store-id="${card.store_id || ''}" title="この店舗にQRカードを追加">
+                ${canAddMore ? `
+                <button type="button" class="btn-add-card-same-store text-xs font-semibold text-green-600 border border-green-200 hover:bg-green-50 px-3 py-2 rounded-lg transition-all" data-google-url="${escapeHtml(firstCard.google_url || '')}" data-store-name="${escapeHtml(store.name || '')}" data-store-id="${store.id}" title="この店舗にQRカードを追加">
                   <i class="fas fa-plus mr-1"></i>QR追加
                 </button>
-                <button type="button" class="btn-delete-card text-xs font-semibold text-red-400 border border-red-100 hover:bg-red-50 px-3 py-2 rounded-lg transition-all" data-card-id="${card.id}" data-name="${escapeHtml(card.store_name || card.short_code)}">
-                  <i class="fas fa-trash"></i>
-                </button>
+                ` : `
+                <span class="text-[10px] text-gray-400 border border-gray-200 px-2 py-1.5 rounded-lg"><i class="fas fa-lock mr-0.5"></i>上限</span>
+                `}
               </div>
             </div>
 
-            <!-- Add Card Form (hidden) -->
-            <div class="add-card-form hidden mt-4 bg-green-50/50 border border-green-200 rounded-xl p-4" data-store-id="${card.store_id || ''}">
+            <!-- QR Cards Table -->
+            <div class="border border-gray-200 rounded-xl overflow-hidden">
+              ${storeCards.map((card, idx) => `
+              <div class="qr-card-row ${idx > 0 ? 'border-t border-gray-100' : ''} p-4 hover:bg-gray-50/50 transition-colors" data-card-id="${card.id}">
+                <div class="flex items-start gap-3">
+                  <!-- QR Mini -->
+                  <div class="flex-shrink-0 bg-white border border-gray-200 rounded-lg p-1.5 qr-mini" data-card-id="${card.id}">
+                    <div class="w-12 h-12 flex items-center justify-center text-gray-300">
+                      <i class="fas fa-qrcode text-xl"></i>
+                    </div>
+                  </div>
+
+                  <!-- Card Info -->
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap mb-1">
+                      ${card.label ? `<span class="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-medium"><i class="fas fa-tag mr-0.5 text-[10px]"></i>${escapeHtml(card.label)}</span>` : `<span class="text-xs text-gray-400">#${escapeHtml(card.short_code)}</span>`}
+                      <span class="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">${escapeHtml(card.template)}</span>
+                      <span class="text-[10px] text-gray-400">${formatDate(card.created_at)}</span>
+                    </div>
+                    <!-- Short URL -->
+                    <div class="flex items-center gap-1.5 mb-2">
+                      <i class="fas fa-link text-gray-300 text-[10px]"></i>
+                      <code class="text-xs font-mono text-brand-600 truncate">${escapeHtml(card.short_url)}</code>
+                      <button type="button" class="copy-url-btn p-1 text-gray-300 hover:text-brand-600 rounded transition-all" data-url="${escapeHtml(card.short_url)}" title="URLをコピー">
+                        <i class="fas fa-copy text-[10px]"></i>
+                      </button>
+                    </div>
+                    <!-- Stats row -->
+                    <div class="flex items-center gap-3 text-[11px] flex-wrap">
+                      <span class="font-semibold text-brand-600"><i class="fas fa-mouse-pointer mr-0.5"></i>${card.click_count || 0} クリック</span>
+                      <!-- Gate toggle inline -->
+                      <button type="button" class="btn-toggle-gate inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold transition-all ${card.gate_enabled ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-gray-100 text-gray-400 border border-gray-200'}" data-card-id="${card.id}" data-enabled="${card.gate_enabled ? '1' : '0'}">
+                        <i class="fas fa-shield-alt text-[10px]"></i>ゲート${card.gate_enabled ? 'ON' : 'OFF'}
+                      </button>
+                      ${card.feedback_count > 0 ? `
+                      <button type="button" class="btn-view-feedbacks inline-flex items-center gap-1 text-[11px] text-amber-600 hover:text-amber-700 font-semibold" data-card-id="${card.id}">
+                        <i class="fas fa-comment-dots text-[10px]"></i>${card.feedback_count}件
+                        ${card.unread_feedback > 0 ? `<span class="bg-red-500 text-white px-1 py-0 rounded-full text-[9px] font-bold">${card.unread_feedback}</span>` : ''}
+                      </button>
+                      ` : ''}
+                      ${card.recent_clicks && card.recent_clicks.length > 0 ? `<span class="text-gray-400" title="最新の読み込み: ${formatDateTimeJST(card.recent_clicks[0])}"><i class="fas fa-clock text-[10px] mr-0.5"></i>${formatDateTimeJST(card.recent_clicks[0])}</span>` : ''}
+                    </div>
+                    <!-- Feedbacks container (hidden) -->
+                    <div class="feedbacks-container hidden mt-2" data-card-id="${card.id}"></div>
+                  </div>
+
+                  <!-- Card Actions -->
+                  <div class="flex-shrink-0 flex items-center gap-1">
+                    <div class="relative">
+                      <button type="button" class="btn-pdf-menu text-xs text-brand-600 hover:bg-brand-50 p-1.5 rounded-md transition-all" data-card-id="${card.id}" data-name="${escapeHtml(card.store_name || card.short_code)}" title="PDFダウンロード">
+                        <i class="fas fa-download"></i>
+                      </button>
+                      <div class="pdf-menu hidden absolute bottom-full right-0 mb-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 w-44" data-card-id="${card.id}">
+                        <button type="button" class="btn-dl-pdf w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-brand-50 hover:text-brand-600 rounded-t-lg transition-colors" data-layout="a4-single" data-copies="1">
+                          <i class="fas fa-expand mr-1.5"></i>A4 1枚（拡大）
+                        </button>
+                        <button type="button" class="btn-dl-pdf w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-brand-50 hover:text-brand-600 transition-colors" data-layout="a4-multi" data-copies="2">
+                          <i class="fas fa-columns mr-1.5"></i>A4 2分割
+                        </button>
+                        <button type="button" class="btn-dl-pdf w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-brand-50 hover:text-brand-600 transition-colors" data-layout="a4-multi" data-copies="4">
+                          <i class="fas fa-th-large mr-1.5"></i>A4 4分割
+                        </button>
+                        <button type="button" class="btn-dl-pdf w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-brand-50 hover:text-brand-600 rounded-b-lg transition-colors" data-layout="a4-multi" data-copies="8">
+                          <i class="fas fa-th mr-1.5"></i>A4 8分割
+                        </button>
+                      </div>
+                    </div>
+                    <a href="/api/cards/${card.id}/qr" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 p-1.5 rounded-md transition-all no-underline" title="QR画像">
+                      <i class="fas fa-qrcode"></i>
+                    </a>
+                    <button type="button" class="btn-delete-card text-xs text-gray-300 hover:text-red-500 p-1.5 rounded-md transition-all" data-card-id="${card.id}" data-name="${escapeHtml(card.label || card.store_name || card.short_code)}">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              `).join('')}
+            </div>
+
+            <!-- Add Card Form (hidden, per-store) -->
+            <div class="add-card-form hidden mt-4 bg-green-50/50 border border-green-200 rounded-xl p-4" data-store-id="${store.id}">
               <p class="text-xs font-bold text-green-800 mb-3">
-                <i class="fas fa-plus-circle mr-1"></i>この店舗にQRカードを追加
+                <i class="fas fa-plus-circle mr-1"></i>「${escapeHtml(store.name)}」にQRカードを追加（${storeCards.length}/${maxCardsPerStore}枚）
               </p>
               <div class="space-y-2">
                 <input type="text" class="add-card-label w-full text-sm border border-green-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:border-green-400 outline-none" placeholder="ラベル（例: テーブル用、レジ横用）" maxlength="50">
                 <div class="flex gap-2">
-                  <button type="button" class="btn-confirm-add-card flex-1 text-xs font-bold text-white bg-green-600 hover:bg-green-700 px-4 py-2.5 rounded-lg transition-all" data-google-url="${escapeHtml(card.google_url || '')}" data-store-name="${escapeHtml(card.store_name || '')}">
+                  <button type="button" class="btn-confirm-add-card flex-1 text-xs font-bold text-white bg-green-600 hover:bg-green-700 px-4 py-2.5 rounded-lg transition-all" data-google-url="${escapeHtml(firstCard.google_url || '')}" data-store-name="${escapeHtml(store.name || '')}">
                     <i class="fas fa-check mr-1"></i>作成
                   </button>
                   <button type="button" class="btn-cancel-add-card text-xs font-semibold text-gray-500 border border-gray-300 hover:bg-gray-50 px-4 py-2.5 rounded-lg transition-all">
@@ -1010,7 +1031,8 @@ async function initDashboardPage() {
             </div>
           </div>
         </div>
-      `).join('')
+        `
+      }).join('')
 
       // Load mini QR codes
       cards.forEach(card => {
@@ -1022,8 +1044,8 @@ async function initDashboardPage() {
               qrEl.innerHTML = svg
               const svgEl = qrEl.querySelector('svg')
               if (svgEl) {
-                svgEl.setAttribute('width', '56')
-                svgEl.setAttribute('height', '56')
+                svgEl.setAttribute('width', '48')
+                svgEl.setAttribute('height', '48')
               }
             })
             .catch(() => {})
@@ -1041,7 +1063,7 @@ async function initDashboardPage() {
 }
 
 function attachDashboardEvents(container) {
-  // Gate toggle
+  // Gate toggle (badge button style)
   container.querySelectorAll('.btn-toggle-gate').forEach(btn => {
     btn.addEventListener('click', async () => {
       const cardId = btn.dataset.cardId
@@ -1049,17 +1071,14 @@ function attachDashboardEvents(container) {
       const newEnabled = currentlyEnabled ? 0 : 1
 
       // Optimistic UI update
-      const knob = btn.querySelector('span')
-      if (newEnabled) {
-        btn.classList.remove('bg-gray-300')
-        btn.classList.add('bg-green-500')
-        knob.style.left = 'calc(100% - 1.375rem)'
-      } else {
-        btn.classList.remove('bg-green-500')
-        btn.classList.add('bg-gray-300')
-        knob.style.left = '0.125rem'
-      }
       btn.dataset.enabled = String(newEnabled)
+      if (newEnabled) {
+        btn.className = btn.className.replace('bg-gray-100 text-gray-400 border-gray-200', 'bg-green-50 text-green-700 border-green-200')
+        btn.innerHTML = '<i class="fas fa-shield-alt text-[10px]"></i>ゲートON'
+      } else {
+        btn.className = btn.className.replace('bg-green-50 text-green-700 border-green-200', 'bg-gray-100 text-gray-400 border-gray-200')
+        btn.innerHTML = '<i class="fas fa-shield-alt text-[10px]"></i>ゲートOFF'
+      }
 
       try {
         const res = await fetch(`/api/cards/${cardId}`, {
@@ -1068,19 +1087,15 @@ function attachDashboardEvents(container) {
           body: JSON.stringify({ gate_enabled: newEnabled })
         })
         if (!res.ok) throw new Error()
-        // Reload dashboard to update full UI (gate description, feedback section)
-        initDashboardPage()
       } catch {
         // Revert on error
         btn.dataset.enabled = String(currentlyEnabled ? 1 : 0)
         if (currentlyEnabled) {
-          btn.classList.remove('bg-gray-300')
-          btn.classList.add('bg-green-500')
-          knob.style.left = 'calc(100% - 1.375rem)'
+          btn.className = btn.className.replace('bg-gray-100 text-gray-400 border-gray-200', 'bg-green-50 text-green-700 border-green-200')
+          btn.innerHTML = '<i class="fas fa-shield-alt text-[10px]"></i>ゲートON'
         } else {
-          btn.classList.remove('bg-green-500')
-          btn.classList.add('bg-gray-300')
-          knob.style.left = '0.125rem'
+          btn.className = btn.className.replace('bg-green-50 text-green-700 border-green-200', 'bg-gray-100 text-gray-400 border-gray-200')
+          btn.innerHTML = '<i class="fas fa-shield-alt text-[10px]"></i>ゲートOFF'
         }
       }
     })
@@ -1232,19 +1247,19 @@ function attachDashboardEvents(container) {
       try {
         const res = await fetch(`/api/cards/${cardId}`, { method: 'DELETE' })
         if (res.ok) {
-          const cardEl = btn.closest('[data-card-id]')
-          if (cardEl) cardEl.remove()
+          // Reload dashboard to refresh store grouping
+          initDashboardPage()
         }
       } catch { }
     })
   })
 
-  // Add card to same store — toggle form
+  // Add card to same store — toggle form (now at store level)
   container.querySelectorAll('.btn-add-card-same-store').forEach(btn => {
     btn.addEventListener('click', () => {
-      const cardWrapper = btn.closest('[data-card-id]')
-      if (!cardWrapper) return
-      const form = cardWrapper.querySelector('.add-card-form')
+      const storeWrapper = btn.closest('[data-store-id]')
+      if (!storeWrapper) return
+      const form = storeWrapper.querySelector('.add-card-form')
       if (!form) return
 
       // Hide all other add-card forms first
@@ -2049,7 +2064,7 @@ async function renderPlanStatus(user) {
             <p class="text-sm text-blue-100">
               次回更新日: ${expiresText}
               <span class="mx-2">•</span>
-              店舗20件・QR無制限
+              店舗20件・各QR10枚まで
             </p>
           </div>
           <button type="button" id="btn-manage-subscription" class="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-all">
@@ -2088,7 +2103,7 @@ async function renderPlanStatus(user) {
               <span class="text-lg font-bold text-gray-900">Free プラン</span>
               <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">現在のプラン</span>
             </div>
-            <p class="text-sm text-gray-500">店舗2件・各QR2枚まで</p>
+            <p class="text-sm text-gray-500">店舗2件・各店舗QR2枚まで</p>
           </div>
           <a href="/pricing" class="inline-flex items-center justify-center gap-2 bg-brand-600 text-white font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-brand-700 transition-all shadow-sm no-underline">
             <i class="fas fa-crown text-amber-300"></i>
