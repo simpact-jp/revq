@@ -579,12 +579,18 @@ function initLoginPage() {
     otpError.classList.add('hidden')
 
     const endpoint = authMode === 'register' ? '/api/auth/register' : '/api/auth/send-code'
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    })
-    const data = await res.json()
+    let res, data
+    try {
+      res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      data = await res.json()
+    } catch (networkErr) {
+      showError('通信エラーが発生しました', 'インターネット接続を確認してください。ページを再読み込みして再度お試しください。')
+      throw new Error('__handled__')
+    }
 
     if (!res.ok) {
       // If user not registered and on login tab, suggest switching
@@ -613,8 +619,14 @@ function initLoginPage() {
     authTabs.classList.add('hidden')
     codeInput.focus()
 
+    // Show success notification
     otpEmailSent.classList.remove('hidden')
     otpError.classList.add('hidden')
+
+    // Verify email was actually sent (not just API success)
+    if (data.email_sent === false) {
+      showError('メールの送信に問題が発生した可能性があります', '1–2分待ってもメールが届かない場合は、再送信ボタンをお試しください。')
+    }
   }
 
   // --- Send button ---

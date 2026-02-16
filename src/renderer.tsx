@@ -1,5 +1,8 @@
 import { jsxRenderer } from 'hono/jsx-renderer'
 
+// Build version for cache busting — changes with each deployment
+const BUILD_VERSION = Date.now().toString(36)
+
 export const renderer = jsxRenderer(({ children, title }) => {
   const isAdmin = title?.toString().includes('運営管理')
   const pageTitle = title || 'RevQ — Googleレビュー依頼カード作成ツール｜QRコード付き｜無料'
@@ -121,7 +124,7 @@ export const renderer = jsxRenderer(({ children, title }) => {
 
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet" />
-        <link href="/static/style.css" rel="stylesheet" />
+        <link href={`/static/style.css?v=${BUILD_VERSION}`} rel="stylesheet" />
         <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232563eb'/><text x='16' y='22' font-family='system-ui,sans-serif' font-size='18' font-weight='bold' fill='white' text-anchor='middle'>Q</text></svg>" />
         <script dangerouslySetInnerHTML={{ __html: `
           tailwind.config = {
@@ -197,7 +200,7 @@ export const renderer = jsxRenderer(({ children, title }) => {
           </div>
         </footer>
 
-        <script src="/static/app.js"></script>
+        <script src={`/static/app.js?v=${BUILD_VERSION}`}></script>
       </body>
     </html>
   )

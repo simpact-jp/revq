@@ -17,7 +17,10 @@ async function sendOTPEmail(
   fromEmail: string | undefined,
   isRegistration: boolean = false
 ): Promise<boolean> {
-  if (!apiKey) return false
+  if (!apiKey) {
+    console.error('[OTP Email] RESEND_API_KEY is not set')
+    return false
+  }
 
   const from = fromEmail || 'RevQ <noreply@revq.jp>'
   const subject = isRegistration
