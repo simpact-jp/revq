@@ -126,7 +126,8 @@ export const renderer = jsxRenderer(({ children, title }) => {
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet" />
         <link href={`/static/style.css?v=${BUILD_VERSION}`} rel="stylesheet" />
-        <link rel="icon" href="/static/images/logo.jpg" />
+        <link rel="icon" type="image/png" href="/static/images/favicon.png" />
+        <link rel="apple-touch-icon" href="/static/images/favicon.png" />
         <script dangerouslySetInnerHTML={{ __html: `
           tailwind.config = {
             theme: {
